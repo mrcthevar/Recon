@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Plus, Building2 } from 'lucide-react';
+import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Plus, Building2, Flame } from 'lucide-react';
 import { Company, SearchMode } from '../types';
 
 interface SearchPaneProps {
@@ -37,6 +37,12 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
     } else {
        if (companyName) onSearch('lookup', companyName, lookupCity || 'Anywhere'); // City optional for lookup
     }
+  };
+
+  const getHotScoreColor = (score: number) => {
+    if (score >= 80) return 'from-red-500 to-orange-500';
+    if (score >= 60) return 'from-orange-400 to-amber-400';
+    return 'from-neutral-400 to-neutral-500';
   };
 
   return (
@@ -165,8 +171,8 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
 
         {companies.map((company, index) => {
           const isSelected = selectedCompanyId === company.id;
-          // Staggered delay for each card
-          const animationDelay = `${(index % 10) * 50}ms`; // Limit stagger to first 10 to avoid long wait on load more
+          const animationDelay = `${(index % 10) * 50}ms`;
+          const hotColor = getHotScoreColor(company.hotScore);
           
           return (
             <div
@@ -193,7 +199,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                              href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
                              target="_blank" 
                              rel="noreferrer"
-                             onClick={(e) => e.stopPropagation()} // Prevent card selection when clicking link
+                             onClick={(e) => e.stopPropagation()} 
                              className="text-xs text-neutral-500 hover:text-accent hover:underline truncate max-w-[150px] transition-colors"
                           >
                             {company.website.replace(/^https?:\/\/(www\.)?/, '')}
@@ -202,14 +208,15 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                       )}
                   </div>
                 </div>
-                <span className={`
-                  text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide transition-colors whitespace-nowrap
-                  ${company.status === 'New' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' : 
-                    company.status === 'Warm' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' :
-                    'bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-400'}
+
+                {/* Hot Score Badge */}
+                <div className={`
+                    flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-white shadow-sm
+                    bg-gradient-to-r ${hotColor}
                 `}>
-                  {company.status}
-                </span>
+                    <Flame className="w-3 h-3 fill-white/90" />
+                    <span>{company.hotScore}%</span>
+                </div>
               </div>
               
               {/* Active Indicator Slide-in */}

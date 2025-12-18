@@ -1,3 +1,8 @@
+export interface Signal {
+  type: string;
+  text: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -11,11 +16,19 @@ export interface Company {
   phone: string;
   email: string;
   socials: string;
+  hotScore: number;
+  signals: Signal[];
+}
+
+export interface Pitch {
+  angle: string;
+  subject: string;
+  body: string;
 }
 
 export interface ScoutData {
   company: Company | null;
-  pitch: string | null;
+  pitches: Pitch[];
 }
 
 export interface PitchParams {

@@ -1,6 +1,6 @@
-import { PitchParams, Company, SearchParams } from "../types";
+import { PitchParams, Company, SearchParams, Pitch } from "../types";
 
-export const generatePitch = async (params: PitchParams): Promise<string> => {
+export const generatePitch = async (params: PitchParams): Promise<Pitch[]> => {
   try {
     const response = await fetch('/api/pitch', {
       method: 'POST',
@@ -16,7 +16,7 @@ export const generatePitch = async (params: PitchParams): Promise<string> => {
       if (!response.ok) {
         throw new Error(data.error || `Pitch Generation Failed: ${response.statusText}`);
       }
-      return data.text;
+      return data.pitches || [];
     } else {
        const text = await response.text();
        console.error("Pitch API Error (Non-JSON):", text);

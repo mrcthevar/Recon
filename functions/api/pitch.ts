@@ -1,20 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
-
-// We redefine constants here to ensure the serverless function is self-contained
-const MODEL_NAME = 'gemini-3-flash-preview';
-const SYSTEM_INSTRUCTION = `
-You are Recon, an elite sales strategist for high-end creative freelancers (cinematographers, editors, designers).
-Your goal is to write cold emails that convert.
-Input: Company Name, Industry, User's Skills, Desired Tone.
-Output: A concise, high-impact cold email.
-
-Rules:
-1. Subject line must be intriguing but not clickbait.
-2. Opening line must be hyper-personalized based on the company's industry.
-3. No fluff. Get straight to the value proposition.
-4. Call to action should be low friction (e.g., "Worth a chat?").
-5. Return ONLY the email body (including subject line at the top formatted as "Subject: ...").
-`;
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface Env {
   API_KEY: string;
@@ -22,14 +6,11 @@ interface Env {
 
 export const onRequestPost = async (context: any) => {
   try {
-     // Polyfill process for libraries that expect it
     if (typeof process === 'undefined') {
       (globalThis as any).process = { env: {} };
     }
 
     const { request, env } = context;
-    
-    // 1. Security Check
     const apiKey = env.API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : null);
 
     if (!apiKey) {
@@ -39,53 +20,66 @@ export const onRequestPost = async (context: any) => {
       });
     }
 
-    // 2. Parse Input
-    const params = await request.json();
-    const { companyName, industry, userSkills, tone } = params;
+    const { companyName, industry, userSkills, tone } = await request.json();
 
-    if (!companyName || !industry || !userSkills) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // 3. Initialize AI (Server-side)
     const ai = new GoogleGenAI({ apiKey: apiKey });
+    // Using Gemini 3 Flash for superior creative writing and instruction following
+    const model = 'gemini-3-flash-preview';
 
-    // 4. Generate Content
     const prompt = `
-      Write a cold email to ${companyName}, a company in the ${industry} space.
-      My skills: ${userSkills}.
-      Tone: ${tone}.
-      
-      Focus on how my skills specifically solve problems for their industry. 
-      Keep it under 150 words.
+      Create 3 distinct cold email pitches for:
+      Target: ${companyName} (${industry})
+      My Offer/Skills: ${userSkills}
+      Tone: ${tone}
+
+      Generate 3 variations:
+      1. "Direct Value": Short, punchy, focuses on ROI/Result.
+      2. "The Observer": Compliments specific aspect of their industry/work, then pivots to offer.
+      3. "The Problem Solver": Asks a question about a common pain point in ${industry}, offers solution.
+
+      Format as a JSON object with a key "pitches" containing an array of objects.
+      Each object must have: "angle" (e.g. Direct Value), "subject", "body".
+      Keep bodies under 120 words.
     `;
 
     const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: {
-        parts: [{ text: prompt }],
-      },
+      model: model,
+      contents: { parts: [{ text: prompt }] },
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.8,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            pitches: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  angle: { type: Type.STRING },
+                  subject: { type: Type.STRING },
+                  body: { type: Type.STRING },
+                },
+                required: ["angle", "subject", "body"],
+              },
+            },
+          },
+          required: ["pitches"],
+        },
+        temperature: 0.7,
       },
     });
 
-    const generatedText = response.text || "Could not generate pitch.";
+    const text = response.text || "{}";
+    const data = JSON.parse(text);
 
-    // 5. Return Result
-    return new Response(JSON.stringify({ text: generatedText }), {
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
 
   } catch (error: any) {
-    console.error("Backend Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    console.error("Backend Pitch Error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
