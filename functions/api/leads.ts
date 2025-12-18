@@ -33,39 +33,48 @@ export const onRequestPost = async (context: any) => {
     const model = 'gemini-2.5-flash';
 
     let prompt = '';
+    
+    // Strict example line to guide the model
+    const exampleLine = "Example Co | https://example.com | A leading digital agency | Web Dev | Custom Apps | 555-0123 | info@example.com | https://twitter.com/ex | 85 | Hiring:Devs;Growth:New Office";
 
     if (mode === 'lookup') {
         prompt = `
-            Find details for the company "${companyName}" located in or near "${city}".
+            Task: detailed research on company "${companyName}" in "${city}".
             Use Google Maps to verify they exist.
             
-            Output a single line with these details separated by pipes (|):
-            Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs (space separated) | Hot Score (0-100) | Signals (Type:Description;Type:Description)
+            Output: A SINGLE LINE of pipe-separated details.
+            Format: Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs | Hot Score (0-100) | Signals
+            
+            Example output format:
+            ${exampleLine}
 
             Rules:
-            1. Hot Score: Estimate 0-100 based on digital presence, recent activity, and market fit.
-            2. Signals: Identify 1-3 signals (e.g. Funding:Series A; Hiring:Designers; News:Product Launch). Separate multiple signals with semicolons (;). If none, "Growth:Active".
-            3. Use "N/A" for missing text fields.
-            4. Return ONLY that single line.
+            1. Hot Score: 0-100 based on digital presence/activity.
+            2. Signals: 1-3 signals (e.g. Funding:Series A; Hiring:Designers). Separated by semicolons (;).
+            3. Use "N/A" for missing text.
+            4. Return ONLY the data line. No intro, no markdown.
         `;
     } else {
         const exclusionText = excludeNames && excludeNames.length > 0 
-          ? `Do NOT include these companies: ${excludeNames.join(', ')}.` 
+          ? `Exclude: ${excludeNames.join(', ')}.` 
           : '';
 
         prompt = `
-          Find 10 active ${industry} companies or agencies in ${city}.
+          Task: List 10 active ${industry} companies in ${city}.
           ${exclusionText}
           
-          For each company, strictly output details on a single line separated by pipes (|):
-          Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs | Hot Score (0-100) | Signals
+          Output: 10 lines of pipe-separated details.
+          Format: Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs | Hot Score (0-100) | Signals
+          
+          Example output format:
+          ${exampleLine}
 
           Rules:
-          1. Hot Score: Estimate 0-100 based on "judging a book by its cover" (branding quality, activity). 80+ is distinct/high-end.
-          2. Signals: Identify 1-3 key signals (e.g. Hiring:Creative Director; Tech:Uses Shopify; Growth:New Office). Format: "Type:Description;Type:Description".
+          1. Hot Score: 0-100. 80+ is high-end/distinct.
+          2. Signals: e.g. Hiring:Creative Director; Tech:Shopify; Growth:New Office. Format: "Type:Desc;Type:Desc".
           3. If Email/Phone missing, write "N/A".
           4. Social Media: Space separated URLs.
-          5. No markdown, no headers, just the data lines.
+          5. STRICTLY NO MARKDOWN, NO TABLE HEADERS, JUST RAW DATA LINES.
         `;
     }
 
@@ -75,6 +84,7 @@ export const onRequestPost = async (context: any) => {
       config: {
         tools: [{ googleMaps: {} }],
         temperature: 0.6,
+        systemInstruction: "You are a data extractor API. You output raw text data in pipe-separated format only. Do not converse."
       },
     });
 
