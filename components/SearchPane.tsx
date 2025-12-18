@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar } from 'lucide-react';
+import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Plus } from 'lucide-react';
 import { Company } from '../types';
 
 interface SearchPaneProps {
@@ -7,6 +7,7 @@ interface SearchPaneProps {
   selectedCompanyId: string | null;
   onSelectCompany: (id: string) => void;
   onSearch?: (industry: string, city: string) => void;
+  onLoadMore?: () => void;
   isSearching?: boolean;
 }
 
@@ -15,6 +16,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   selectedCompanyId, 
   onSelectCompany,
   onSearch,
+  onLoadMore,
   isSearching = false
 }) => {
   const [industry, setIndustry] = useState('');
@@ -75,8 +77,8 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                 : 'bg-accent hover:bg-accent-glow text-white shadow-accent/20 hover:shadow-accent/40 active:scale-[0.98]'}
             `}
           >
-            {isSearching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
-            {isSearching ? 'Scouting...' : 'Find Leads'}
+            {isSearching && companies.length === 0 ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
+            {isSearching && companies.length === 0 ? 'Scouting...' : 'Find Leads'}
           </button>
         </div>
       </div>
@@ -86,85 +88,90 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
 
       {/* Results List */}
       <div className="flex-1 overflow-y-auto -mx-2 px-2 pb-4 space-y-3">
-        {companies.length === 0 ? (
+        {companies.length === 0 && !isSearching && (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-60 animate-fade-in p-8">
              <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
-                {isSearching ? (
-                   <Loader2 className="w-8 h-8 text-accent animate-spin" />
-                ) : (
-                   <Radar className="w-8 h-8 text-neutral-400" />
-                )}
+                 <Radar className="w-8 h-8 text-neutral-400" />
              </div>
              <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
-               {isSearching ? 'Scanning Sector...' : 'Awaiting Mission'}
+               Awaiting Mission
              </h3>
              <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
-               {isSearching 
-                 ? 'Reconnaissance units are identifying targets via Google Maps.' 
-                 : 'Enter an Industry and City above to scout for live leads.'}
+               Enter an Industry and City above to scout for live leads.
              </p>
           </div>
-        ) : (
-          companies.map((company, index) => {
-            const isSelected = selectedCompanyId === company.id;
-            // Staggered delay for each card
-            const animationDelay = `${index * 100}ms`;
-            
-            return (
-              <div
-                key={company.id}
-                onClick={() => onSelectCompany(company.id)}
-                style={{ animationDelay }}
-                className={`
-                  relative p-4 rounded-xl border cursor-pointer transition-all duration-300 group opacity-0 animate-fade-in-up
-                  ${isSelected 
-                    ? 'bg-white dark:bg-neutral-800 border-accent shadow-md ring-1 ring-accent z-10 scale-[1.01]' 
-                    : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-sm hover:bg-white dark:hover:bg-neutral-800/80'}
-                `}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 mr-2">
-                    <h3 className={`font-semibold text-sm transition-colors ${isSelected ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white'}`}>
-                      {company.name}
-                    </h3>
-                    <div className="flex items-center mt-1 space-x-2">
-                       {company.website !== 'N/A' && (
-                         <>
-                           <Globe className="w-3 h-3 text-neutral-400 group-hover:text-accent transition-colors" />
-                           <a 
-                             href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
-                             target="_blank" 
-                             rel="noopener noreferrer" 
-                             onClick={(e) => e.stopPropagation()}
-                             className="text-xs text-neutral-500 hover:text-accent dark:hover:text-accent dark:group-hover:text-neutral-400 transition-colors truncate max-w-[150px] hover:underline"
-                           >
-                             {company.website}
-                           </a>
-                         </>
-                       )}
-                    </div>
+        )}
+
+        {companies.map((company, index) => {
+          const isSelected = selectedCompanyId === company.id;
+          // Staggered delay for each card
+          const animationDelay = `${index * 50}ms`;
+          
+          return (
+            <div
+              key={company.id}
+              onClick={() => onSelectCompany(company.id)}
+              style={{ animationDelay }}
+              className={`
+                relative p-4 rounded-xl border cursor-pointer transition-all duration-300 group opacity-0 animate-fade-in-up
+                ${isSelected 
+                  ? 'bg-white dark:bg-neutral-800 border-accent shadow-md ring-1 ring-accent z-10 scale-[1.01]' 
+                  : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-sm hover:bg-white dark:hover:bg-neutral-800/80'}
+              `}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex-1 mr-2">
+                  <h3 className={`font-semibold text-sm transition-colors ${isSelected ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white'}`}>
+                    {company.name}
+                  </h3>
+                  <div className="flex items-center mt-1 space-x-2">
+                      {company.website !== 'N/A' && (
+                        <>
+                          <Globe className="w-3 h-3 text-neutral-400 group-hover:text-accent transition-colors" />
+                          <span className="text-xs text-neutral-500 truncate max-w-[150px]">
+                            {company.website.replace(/^https?:\/\/(www\.)?/, '')}
+                          </span>
+                        </>
+                      )}
                   </div>
-                  <span className={`
-                    text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide transition-colors whitespace-nowrap
-                    ${company.status === 'New' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' : 
-                      company.status === 'Warm' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' :
-                      'bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-400'}
-                  `}>
-                    {company.status}
-                  </span>
                 </div>
-                
-                {/* Active Indicator Slide-in */}
-                <div className={`
-                    mt-3 flex items-center text-xs font-medium text-accent overflow-hidden transition-all duration-300 ease-out
-                    ${isSelected ? 'max-h-6 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-2'}
+                <span className={`
+                  text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide transition-colors whitespace-nowrap
+                  ${company.status === 'New' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' : 
+                    company.status === 'Warm' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' :
+                    'bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-400'}
                 `}>
-                    <span>Active Lead</span>
-                    <ChevronRight className="w-3 h-3 ml-1 animate-pulse" />
-                </div>
+                  {company.status}
+                </span>
               </div>
-            );
-          })
+              
+              {/* Active Indicator Slide-in */}
+              <div className={`
+                  mt-3 flex items-center text-xs font-medium text-accent overflow-hidden transition-all duration-300 ease-out
+                  ${isSelected ? 'max-h-6 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-2'}
+              `}>
+                  <span>Active Lead</span>
+                  <ChevronRight className="w-3 h-3 ml-1 animate-pulse" />
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* Load More Button */}
+        {companies.length > 0 && (
+           <button
+              onClick={onLoadMore}
+              disabled={isSearching}
+              className={`
+                 w-full py-3 mt-4 rounded-xl border border-dashed border-neutral-300 dark:border-white/20 text-sm font-medium
+                 text-neutral-500 dark:text-neutral-400 hover:text-accent dark:hover:text-accent hover:border-accent dark:hover:border-accent
+                 transition-all flex items-center justify-center gap-2 group
+                 ${isSearching ? 'opacity-50 cursor-wait' : ''}
+              `}
+           >
+              {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+              {isSearching ? 'Scouting More...' : 'Load More Leads'}
+           </button>
         )}
       </div>
     </div>

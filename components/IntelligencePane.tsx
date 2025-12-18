@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Target, Send, Loader2, Sparkles, Copy, Check, Bot } from 'lucide-react';
-import { Company, PitchParams } from '../types';
+import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award } from 'lucide-react';
+import { Company } from '../types';
 import { generatePitch } from '../services/geminiService';
 
 interface IntelligencePaneProps {
@@ -58,13 +58,28 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company }) =
       
       {/* The Scout Card */}
       <section className="glass-panel rounded-2xl border border-neutral-200 dark:border-white/10 bg-white/60 dark:bg-neutral-900/60 p-6 shadow-soft transition-all hover:border-neutral-300 dark:hover:border-white/20">
-        <div className="flex items-center gap-3 mb-5">
-           <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/10">
-             <Target className="w-4 h-4" />
+        <div className="flex items-center justify-between mb-5">
+           <div className="flex items-center gap-3">
+               <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/10">
+                 <Target className="w-4 h-4" />
+               </div>
+               <div>
+                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{company.name}</h3>
+                 <p className="text-[10px] text-neutral-500 font-medium tracking-wide">INTELLIGENCE BRIEF</p>
+               </div>
            </div>
-           <div>
-             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">The Scout</h3>
-             <p className="text-[10px] text-neutral-500 font-medium tracking-wide">INTELLIGENCE BRIEF</p>
+           {/* Quick Actions */}
+           <div className="flex gap-2">
+               {company.phone !== 'N/A' && (
+                 <a href={`tel:${company.phone}`} className="p-2 rounded-lg bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors" title="Call">
+                    <Phone className="w-4 h-4" />
+                 </a>
+               )}
+               {company.email !== 'N/A' && (
+                 <a href={`mailto:${company.email}`} className="p-2 rounded-lg bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors" title="Email">
+                    <Mail className="w-4 h-4" />
+                 </a>
+               )}
            </div>
         </div>
 
@@ -76,21 +91,34 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company }) =
             </p>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-100 dark:border-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Recent Intel</span>
-              <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200 line-clamp-2">"{company.recentWork}"</p>
-            </div>
-            <div className="p-4 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-100 dark:border-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Suspected Needs</span>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {company.needs.map(need => (
-                  <span key={need} className="text-[10px] font-semibold px-2 py-1 rounded-md bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/5 text-neutral-600 dark:text-neutral-300 shadow-sm">
-                    {need}
-                  </span>
-                ))}
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             {/* Hero Product */}
+             <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10">
+                <div className="flex items-center gap-2 mb-1">
+                   <Award className="w-3 h-3 text-amber-500" />
+                   <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider">Hero Product</span>
+                </div>
+                <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200">{company.heroProduct}</p>
+             </div>
+
+             <div className="p-4 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-100 dark:border-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Recent Intel</span>
+                <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200 line-clamp-2">"{company.recentWork}"</p>
+             </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-100 dark:border-white/5">
+             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-2">Contact Channels</span>
+             <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                   <span className="block text-neutral-400 mb-0.5">Phone</span>
+                   <span className="text-neutral-700 dark:text-neutral-300 font-mono">{company.phone}</span>
+                </div>
+                <div>
+                   <span className="block text-neutral-400 mb-0.5">Email</span>
+                   <span className="text-neutral-700 dark:text-neutral-300 font-mono truncate">{company.email}</span>
+                </div>
+             </div>
           </div>
         </div>
       </section>

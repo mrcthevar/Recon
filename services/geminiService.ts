@@ -29,12 +29,12 @@ export const generatePitch = async (params: PitchParams): Promise<string> => {
   }
 };
 
-export const findLeads = async (industry: string, city: string): Promise<Company[]> => {
+export const findLeads = async (industry: string, city: string, excludeNames: string[] = []): Promise<Company[]> => {
   try {
     const response = await fetch('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ industry, city }),
+      body: JSON.stringify({ industry, city, excludeNames }),
     });
 
     const contentType = response.headers.get("content-type");

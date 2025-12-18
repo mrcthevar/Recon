@@ -30,7 +30,9 @@ export const onRequestPost = async (context: any) => {
     const { request, env } = context;
     
     // 1. Security Check
-    if (!env.API_KEY) {
+    const apiKey = env.API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : null);
+
+    if (!apiKey) {
       return new Response(JSON.stringify({ error: "API Key not configured on server" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -49,7 +51,7 @@ export const onRequestPost = async (context: any) => {
     }
 
     // 3. Initialize AI (Server-side)
-    const ai = new GoogleGenAI({ apiKey: env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: apiKey });
 
     // 4. Generate Content
     const prompt = `

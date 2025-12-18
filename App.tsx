@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { SearchPane } from './components/SearchPane';
 import { IntelligencePane } from './components/IntelligencePane';
@@ -10,6 +10,9 @@ const App: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Keep track of current search params for "Load More"
+  const currentSearchRef = useRef({ industry: '', city: '' });
 
   // Initialize theme
   useEffect(() => {
@@ -34,20 +37,45 @@ const App: React.FC = () => {
 
   const handleSearch = async (industry: string, city: string) => {
     if (!industry || !city) return;
+    
+    currentSearchRef.current = { industry, city };
     setIsSearching(true);
-    setCompanies([]); // Clear previous results while searching
+    setCompanies([]); // Clear previous results for new search
+    
     try {
       const newLeads = await findLeads(industry, city);
       setCompanies(newLeads);
       if (newLeads.length > 0) {
-        setSelectedCompanyId(null); // Reset selection
+        setSelectedCompanyId(null); 
       } else {
         alert(`No leads found for ${industry} in ${city}. Try a broader search.`);
       }
     } catch (error: any) {
       console.error("Search failed", error);
-      // Show the actual error message from the backend for easier debugging
       alert(error.message || "Could not find leads. Please check API Key configuration.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    const { industry, city } = currentSearchRef.current;
+    if (!industry || !city) return;
+
+    setIsSearching(true);
+    try {
+      // Pass existing names to exclude them from next batch
+      const existingNames = companies.map(c => c.name);
+      const moreLeads = await findLeads(industry, city, existingNames);
+      
+      if (moreLeads.length === 0) {
+        alert("No more unique leads found in this area.");
+      } else {
+        setCompanies(prev => [...prev, ...moreLeads]);
+      }
+    } catch (error: any) {
+      console.error("Load more failed", error);
+      alert(error.message || "Failed to load more leads.");
     } finally {
       setIsSearching(false);
     }
@@ -87,6 +115,7 @@ const App: React.FC = () => {
                   selectedCompanyId={selectedCompanyId}
                   onSelectCompany={setSelectedCompanyId}
                   onSearch={handleSearch}
+                  onLoadMore={handleLoadMore}
                   isSearching={isSearching}
               />
             </div>
@@ -107,7 +136,7 @@ const App: React.FC = () => {
                           ← Back to Search
                       </button>
                   </div>
-                  <div className="flex-1 p-4">
+                  <div className="flex-1 p-4 overflow-y-auto">
                       <IntelligencePane company={selectedCompany} />
                   </div>
               </div>

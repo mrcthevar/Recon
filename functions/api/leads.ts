@@ -13,15 +13,18 @@ export const onRequestPost = async (context: any) => {
 
     const { request, env } = context;
 
-    if (!env.API_KEY) {
+    // Robust API Key extraction
+    const apiKey = env.API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : null);
+
+    if (!apiKey) {
       console.error("API_KEY not found in environment variables");
-      return new Response(JSON.stringify({ error: "Server Configuration Error: API Key missing in Cloudflare" }), { 
+      return new Response(JSON.stringify({ error: "Server Configuration Error: API Key missing. Please set API_KEY in Cloudflare Pages settings or .dev.vars" }), { 
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const { industry, city } = await request.json();
+    const { industry, city, excludeNames } = await request.json();
 
     if (!industry || !city) {
       return new Response(JSON.stringify({ error: "Industry and City are required" }), { 
@@ -31,25 +34,32 @@ export const onRequestPost = async (context: any) => {
     }
 
     // Initialize AI
-    const ai = new GoogleGenAI({ apiKey: env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     
     // Maps Grounding requires Gemini 2.5 series
     const model = 'gemini-2.5-flash';
 
     console.log(`Searching for ${industry} in ${city} using ${model}...`);
+    
+    const exclusionText = excludeNames && excludeNames.length > 0 
+      ? `Do NOT include these companies: ${excludeNames.join(', ')}.` 
+      : '';
 
     const prompt = `
-      Find 5 active ${industry} companies or agencies in ${city}.
+      Find 10 active ${industry} companies or agencies in ${city}.
+      ${exclusionText}
       
       I need you to use Google Maps to find real, existing companies.
       
-      For each company found, strictly output the details in this exact format on a single line:
-      Name | Website URL | Brief Description | Potential Service Need
+      For each company found, strictly output the details in this exact format on a single line (use "N/A" if info is missing):
+      Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address
       
-      If a website is not found, write "N/A".
-      The "Potential Service Need" should be a short guess based on their type (e.g., "Video Production", "Branding").
-      
-      Do not include any intro or outro text. Just the list.
+      Rules:
+      1. "Hero Product/Service" is their main offering (e.g., "High-end TVC Production").
+      2. "Potential Service Need" is a guess based on their type (e.g., "Video Editing").
+      3. If Email is not explicitly found, write "N/A".
+      4. If Phone is not found, write "N/A".
+      5. Do not include any intro or outro text. Just the pipe-separated list.
     `;
 
     const response = await ai.models.generateContent({
@@ -57,7 +67,7 @@ export const onRequestPost = async (context: any) => {
       contents: prompt,
       config: {
         tools: [{ googleMaps: {} }],
-        temperature: 0.5,
+        temperature: 0.6,
       },
     });
 
@@ -65,7 +75,6 @@ export const onRequestPost = async (context: any) => {
     console.log("Gemini Response Text:", text);
 
     if (!text) {
-      // Return a safe empty list instead of crashing
        return new Response(JSON.stringify({ leads: [] }), {
         status: 200,
         headers: { "Content-Type": "application/json" }
@@ -87,6 +96,9 @@ export const onRequestPost = async (context: any) => {
         let website = parts[1] || "N/A";
         const description = parts[2] || "No description available";
         const need = parts[3] || "General Creative Services";
+        const heroProduct = parts[4] || "Services";
+        const phone = parts[5] || "N/A";
+        const email = parts[6] || "N/A";
 
         // Cleanup website URL if it contains markdown or extra text
         website = website.replace(/\[.*?\]\(.*?\)/g, (match) => {
@@ -102,7 +114,10 @@ export const onRequestPost = async (context: any) => {
           status: 'New',
           description: description,
           recentWork: "Identified via live search",
-          needs: [need]
+          needs: [need],
+          heroProduct: heroProduct,
+          phone: phone,
+          email: email
         };
       });
 
@@ -113,7 +128,6 @@ export const onRequestPost = async (context: any) => {
 
   } catch (error: any) {
     console.error("Leads API Critical Error:", error);
-    // Ensure we return JSON even on crash
     const errorMessage = error instanceof Error ? error.message : "Unknown Server Error";
     return new Response(JSON.stringify({ error: errorMessage, stack: error.stack }), { 
         status: 500,

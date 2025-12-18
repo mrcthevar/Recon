@@ -7,6 +7,9 @@ export interface Company {
   description: string;
   recentWork: string;
   needs: string[];
+  heroProduct: string;
+  phone: string;
+  email: string;
 }
 
 export interface ScoutData {
