@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, FileImage, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { ACCEPTED_IMAGE_TYPES } from '../constants';
 import { FileData } from '../types';
 
@@ -17,7 +17,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
   const processFile = (file: File) => {
     if (!file) return;
     
-    // Check type roughly (server/api handles strict checks, this is UX)
+    // Check type roughly
     if (!file.type.startsWith('image/')) {
         alert("System currently optimized for Image Reconnaissance.");
     }
@@ -25,7 +25,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      // Extract base64 part
       const base64 = result.split(',')[1];
       onFileSelect({
         file,
@@ -67,8 +66,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
             transition-all duration-300 ease-in-out
             flex flex-col items-center justify-center
             ${isDragging 
-              ? 'border-recon-accent bg-recon-accent-dim' 
-              : 'border-recon-gray hover:border-recon-muted bg-recon-dark/50 hover:bg-recon-gray/20'}
+              ? 'border-accent bg-accent-dim' 
+              : 'border-neutral-700 hover:border-neutral-500 bg-neutral-900/50 hover:bg-neutral-800/20'}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
         >
@@ -81,25 +80,25 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
             disabled={disabled}
           />
           
-          <div className={`p-4 rounded-full bg-recon-gray mb-4 group-hover:scale-110 transition-transform ${isDragging ? 'text-recon-accent' : 'text-gray-400'}`}>
+          <div className={`p-4 rounded-full bg-neutral-800 mb-4 group-hover:scale-110 transition-transform ${isDragging ? 'text-accent' : 'text-neutral-400'}`}>
             <Upload className="w-8 h-8" />
           </div>
           
-          <h3 className="text-lg font-mono font-medium text-gray-300 mb-1">
+          <h3 className="text-lg font-mono font-medium text-neutral-300 mb-1">
             Drop Intelligence Here
           </h3>
-          <p className="text-xs text-gray-500 font-mono">
+          <p className="text-xs text-neutral-500 font-mono">
             SUPPORTED: PNG, JPG, WEBP
           </p>
           
           {/* Decorative corners */}
-          <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-recon-gray group-hover:border-recon-accent transition-colors"></div>
-          <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-recon-gray group-hover:border-recon-accent transition-colors"></div>
-          <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-recon-gray group-hover:border-recon-accent transition-colors"></div>
-          <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-recon-gray group-hover:border-recon-accent transition-colors"></div>
+          <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-neutral-700 group-hover:border-accent transition-colors"></div>
+          <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-neutral-700 group-hover:border-accent transition-colors"></div>
+          <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-neutral-700 group-hover:border-accent transition-colors"></div>
+          <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-neutral-700 group-hover:border-accent transition-colors"></div>
         </div>
       ) : (
-        <div className="relative rounded-lg overflow-hidden border border-recon-gray bg-recon-dark group">
+        <div className="relative rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900 group">
           <img 
             src={selectedFile.previewUrl} 
             alt="Preview" 
@@ -107,7 +106,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
              <div className="flex justify-between items-end">
-                <div className="font-mono text-xs text-recon-accent">
+                <div className="font-mono text-xs text-accent">
                     <p>FILE: {selectedFile.file.name}</p>
                     <p>SIZE: {(selectedFile.file.size / 1024).toFixed(2)} KB</p>
                 </div>
@@ -122,7 +121,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
           </div>
           
           {/* Overlay grid for "tactical" look */}
-          <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(0,255,65,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,65,0.05)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+          <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(20,184,166,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.05)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
         </div>
       )}
     </div>

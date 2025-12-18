@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award } from 'lucide-react';
+import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon } from 'lucide-react';
 import { Company } from '../types';
 import { generatePitch } from '../services/geminiService';
 
@@ -41,6 +41,26 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company }) =
     }
   };
 
+  // Helper to parse socials and get icons
+  const getSocialLinks = () => {
+    if (!company || company.socials === 'N/A') return [];
+    
+    // Split by space or comma, handling common separators
+    const links = company.socials.split(/[\s,]+/).filter(s => s.startsWith('http'));
+    return links.map((link, index) => {
+        let icon = <LinkIcon className="w-4 h-4" />;
+        let name = "Website";
+        
+        if (link.includes('linkedin')) { icon = <Linkedin className="w-4 h-4" />; name = "LinkedIn"; }
+        else if (link.includes('twitter') || link.includes('x.com')) { icon = <Twitter className="w-4 h-4" />; name = "Twitter"; }
+        else if (link.includes('facebook')) { icon = <Facebook className="w-4 h-4" />; name = "Facebook"; }
+        else if (link.includes('instagram')) { icon = <Instagram className="w-4 h-4" />; name = "Instagram"; }
+        else if (link.includes('youtube')) { icon = <Youtube className="w-4 h-4" />; name = "YouTube"; }
+
+        return { url: link, icon, name, key: index };
+    });
+  };
+
   if (!company) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-neutral-400 animate-fade-in select-none">
@@ -52,6 +72,8 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company }) =
       </div>
     );
   }
+
+  const socialLinks = getSocialLinks();
 
   return (
     <div className="h-full flex flex-col gap-6 animate-fade-in-up">
@@ -107,16 +129,52 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company }) =
              </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-100 dark:border-white/5">
-             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-2">Contact Channels</span>
-             <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                   <span className="block text-neutral-400 mb-0.5">Phone</span>
-                   <span className="text-neutral-700 dark:text-neutral-300 font-mono">{company.phone}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             {/* Contact Channels */}
+             <div className="p-4 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-100 dark:border-white/5">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-2">Contact Channels</span>
+                <div className="space-y-2 text-xs">
+                    <div>
+                        <span className="text-neutral-400 mr-2">Phone:</span>
+                        <span className="text-neutral-700 dark:text-neutral-300 font-mono select-all">{company.phone}</span>
+                    </div>
+                    <div>
+                        <span className="text-neutral-400 mr-2">Email:</span>
+                        <span className="text-neutral-700 dark:text-neutral-300 font-mono select-all truncate block">{company.email}</span>
+                    </div>
                 </div>
-                <div>
-                   <span className="block text-neutral-400 mb-0.5">Email</span>
-                   <span className="text-neutral-700 dark:text-neutral-300 font-mono truncate">{company.email}</span>
+             </div>
+             
+             {/* Digital Presence */}
+             <div className="p-4 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-100 dark:border-white/5">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-2">Digital Presence</span>
+                <div className="flex flex-wrap gap-2">
+                    {company.website !== 'N/A' && (
+                        <a 
+                           href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
+                           target="_blank" 
+                           rel="noreferrer"
+                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-white/10 hover:border-accent dark:hover:border-accent text-xs font-medium text-neutral-700 dark:text-neutral-300 transition-all shadow-sm hover:shadow-md"
+                        >
+                           <Globe className="w-3 h-3 text-accent" />
+                           Website
+                        </a>
+                    )}
+                    {socialLinks.map(link => (
+                        <a
+                           key={link.key}
+                           href={link.url}
+                           target="_blank"
+                           rel="noreferrer"
+                           className="flex items-center justify-center p-1.5 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-white/10 hover:border-accent dark:hover:border-accent text-neutral-500 hover:text-accent dark:text-neutral-400 dark:hover:text-accent transition-all shadow-sm"
+                           title={link.name}
+                        >
+                           {link.icon}
+                        </a>
+                    ))}
+                    {company.website === 'N/A' && socialLinks.length === 0 && (
+                        <span className="text-xs text-neutral-400 italic">No digital footprint found.</span>
+                    )}
                 </div>
              </div>
           </div>

@@ -10,6 +10,7 @@ export interface Company {
   heroProduct: string;
   phone: string;
   email: string;
+  socials: string;
 }
 
 export interface ScoutData {

@@ -189,9 +189,15 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                       {company.website !== 'N/A' && (
                         <>
                           <Globe className="w-3 h-3 text-neutral-400 group-hover:text-accent transition-colors" />
-                          <span className="text-xs text-neutral-500 truncate max-w-[150px]">
+                          <a 
+                             href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
+                             target="_blank" 
+                             rel="noreferrer"
+                             onClick={(e) => e.stopPropagation()} // Prevent card selection when clicking link
+                             className="text-xs text-neutral-500 hover:text-accent hover:underline truncate max-w-[150px] transition-colors"
+                          >
                             {company.website.replace(/^https?:\/\/(www\.)?/, '')}
-                          </span>
+                          </a>
                         </>
                       )}
                   </div>

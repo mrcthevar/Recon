@@ -42,14 +42,15 @@ export const onRequestPost = async (context: any) => {
             I need you to use Google Maps to find this specific existing company.
             
             Output the details in this exact format on a single line:
-            Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address
+            Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs (space separated)
 
             Rules:
             1. If exact website is not found, "N/A".
             2. "Potential Service Need" should be a guess based on their business.
             3. "Hero Product" is their main offering.
             4. If Phone/Email not found, "N/A".
-            5. Return ONLY that single line.
+            5. For Social Media, list full URLs separated by spaces. If none, "N/A".
+            6. Return ONLY that single line.
         `;
     } else {
         console.log(`Searching for ${industry} in ${city}...`);
@@ -64,13 +65,14 @@ export const onRequestPost = async (context: any) => {
           I need you to use Google Maps to find real, existing companies.
           
           For each company found, strictly output the details in this exact format on a single line (use "N/A" if info is missing):
-          Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address
+          Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs (space separated)
           
           Rules:
           1. "Hero Product/Service" is their main offering.
           2. "Potential Service Need" is a guess based on their type.
           3. If Email/Phone not found, write "N/A".
-          4. Do not include any intro/outro. Just the pipe-separated list.
+          4. For Social Media, list full URLs separated by spaces. If none, "N/A".
+          5. Do not include any intro/outro. Just the pipe-separated list.
         `;
     }
 
@@ -108,6 +110,7 @@ export const onRequestPost = async (context: any) => {
         const heroProduct = parts[4] || "Services";
         const phone = parts[5] || "N/A";
         const email = parts[6] || "N/A";
+        const socials = parts[7] || "N/A";
 
         website = website.replace(/\[.*?\]\(.*?\)/g, (match) => {
             const url = match.match(/\((.*?)\)/)?.[1];
@@ -128,7 +131,8 @@ export const onRequestPost = async (context: any) => {
           needs: [need],
           heroProduct: heroProduct,
           phone: phone,
-          email: email
+          email: email,
+          socials: socials
         };
       });
 
