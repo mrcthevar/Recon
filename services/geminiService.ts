@@ -12,7 +12,7 @@ export const generatePitch = async (params: PitchParams): Promise<string> => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Server error: ${response.status}`);
+      throw new Error(errorData.error || `Pitch Generation Failed: ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -31,12 +31,21 @@ export const findLeads = async (industry: string, city: string): Promise<Company
       body: JSON.stringify({ industry, city }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch leads: ${response.statusText}`);
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || `Discovery Failed: ${response.statusText}`);
+        }
+        return data.leads || [];
+    } else {
+        // Handle non-JSON response (e.g., 404 HTML page from Vite/Cloudflare 404)
+        if (!response.ok) {
+            throw new Error(`Server Error (${response.status}): ${response.statusText}. Check API path.`);
+        }
+        return [];
     }
 
-    const data = await response.json();
-    return data.leads || [];
   } catch (error) {
     console.error("Recon Discovery Error:", error);
     throw error;

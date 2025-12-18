@@ -35,15 +35,19 @@ const App: React.FC = () => {
   const handleSearch = async (industry: string, city: string) => {
     if (!industry || !city) return;
     setIsSearching(true);
+    setCompanies([]); // Clear previous results while searching
     try {
       const newLeads = await findLeads(industry, city);
       setCompanies(newLeads);
       if (newLeads.length > 0) {
         setSelectedCompanyId(null); // Reset selection
+      } else {
+        alert(`No leads found for ${industry} in ${city}. Try a broader search.`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Search failed", error);
-      alert("Could not find leads. Please try again.");
+      // Show the actual error message from the backend for easier debugging
+      alert(error.message || "Could not find leads. Please check API Key configuration.");
     } finally {
       setIsSearching(false);
     }
