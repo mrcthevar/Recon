@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2 } from 'lucide-react';
+import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar } from 'lucide-react';
 import { Company } from '../types';
 
 interface SearchPaneProps {
@@ -87,8 +87,22 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
       {/* Results List */}
       <div className="flex-1 overflow-y-auto -mx-2 px-2 pb-4 space-y-3">
         {companies.length === 0 ? (
-          <div className="text-center py-10 opacity-60 animate-fade-in">
-             <p className="text-sm text-neutral-500">No leads found. Try a different sector.</p>
+          <div className="h-full flex flex-col items-center justify-center text-center opacity-60 animate-fade-in p-8">
+             <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
+                {isSearching ? (
+                   <Loader2 className="w-8 h-8 text-accent animate-spin" />
+                ) : (
+                   <Radar className="w-8 h-8 text-neutral-400" />
+                )}
+             </div>
+             <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
+               {isSearching ? 'Scanning Sector...' : 'Awaiting Mission'}
+             </h3>
+             <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
+               {isSearching 
+                 ? 'Reconnaissance units are identifying targets via Google Maps.' 
+                 : 'Enter an Industry and City above to scout for live leads.'}
+             </p>
           </div>
         ) : (
           companies.map((company, index) => {
@@ -109,17 +123,29 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                 `}
               >
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1 mr-2">
                     <h3 className={`font-semibold text-sm transition-colors ${isSelected ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white'}`}>
                       {company.name}
                     </h3>
                     <div className="flex items-center mt-1 space-x-2">
-                       <Globe className="w-3 h-3 text-neutral-400 group-hover:text-accent transition-colors" />
-                       <span className="text-xs text-neutral-500 group-hover:text-neutral-600 dark:group-hover:text-neutral-400 transition-colors">{company.website}</span>
+                       {company.website !== 'N/A' && (
+                         <>
+                           <Globe className="w-3 h-3 text-neutral-400 group-hover:text-accent transition-colors" />
+                           <a 
+                             href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
+                             target="_blank" 
+                             rel="noopener noreferrer" 
+                             onClick={(e) => e.stopPropagation()}
+                             className="text-xs text-neutral-500 hover:text-accent dark:hover:text-accent dark:group-hover:text-neutral-400 transition-colors truncate max-w-[150px] hover:underline"
+                           >
+                             {company.website}
+                           </a>
+                         </>
+                       )}
                     </div>
                   </div>
                   <span className={`
-                    text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide transition-colors
+                    text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide transition-colors whitespace-nowrap
                     ${company.status === 'New' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' : 
                       company.status === 'Warm' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' :
                       'bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-400'}

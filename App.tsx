@@ -2,14 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header';
 import { SearchPane } from './components/SearchPane';
 import { IntelligencePane } from './components/IntelligencePane';
-import { MOCK_COMPANIES } from './constants';
 import { Company } from './types';
 import { findLeads } from './services/geminiService';
 
 const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [companies, setCompanies] = useState<Company[]>(MOCK_COMPANIES);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   // Initialize theme

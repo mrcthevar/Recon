@@ -23,17 +23,18 @@ export const onRequestPost = async (context: any) => {
     // Maps Grounding is supported on gemini-2.5-flash
     const model = 'gemini-2.5-flash';
 
-    // We cannot use JSON mode with Maps tool, so we ask for a strict separator format
+    // We ask for a strict separator format including the Website if available
     const prompt = `
       Find 5 active ${industry} companies or agencies in ${city}.
       
       For each company, provide:
       1. Name
-      2. A brief 1-sentence description of what they do.
-      3. A specific 'need' or 'opportunity' a freelancer could pitch for (e.g., "Website redesign", "Video marketing").
+      2. Website URL (if found, otherwise write 'N/A')
+      3. A brief 1-sentence description of what they do.
+      4. A specific 'need' or 'opportunity' a freelancer could pitch for (e.g., "Website redesign", "Video marketing").
       
       Format your output as a strict list where each line is:
-      Name | Description | Potential Need
+      Name | Website | Description | Potential Need
       
       Do not add numbering or bullet points. Just the data separated by pipes (|).
     `;
@@ -55,16 +56,22 @@ export const onRequestPost = async (context: any) => {
       .map(line => line.trim())
       .filter(line => line.includes('|'))
       .map((line, index) => {
-        const [name, description, need] = line.split('|').map(s => s.trim());
+        const parts = line.split('|').map(s => s.trim());
+        // Handle cases where the model might miss a column, though strict prompting helps
+        const name = parts[0] || "Unknown Company";
+        const website = parts[1] || "N/A";
+        const description = parts[2] || "No description available";
+        const need = parts[3] || "General Creative Services";
+
         return {
           id: `gen-${Date.now()}-${index}`,
-          name: name || "Unknown Company",
-          website: "Search to find URL", // Maps grounding returns URLs in metadata, but simplified here for text parsing
+          name: name,
+          website: website,
           industry: industry,
           status: 'New',
-          description: description || "No description available",
-          recentWork: "Identified via active search",
-          needs: [need || "General Creative Services"]
+          description: description,
+          recentWork: "Identified via live search",
+          needs: [need]
         };
       });
 
