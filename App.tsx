@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { SearchPane } from './components/SearchPane';
 import { IntelligencePane } from './components/IntelligencePane';
-import { Company } from './types';
+import { Company, SearchMode, SearchParams } from './types';
 import { findLeads } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -12,7 +12,8 @@ const App: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   
   // Keep track of current search params for "Load More"
-  const currentSearchRef = useRef({ industry: '', city: '' });
+  const currentSearchParamsRef = useRef<SearchParams | null>(null);
+  const previousCompanyCountRef = useRef(0);
 
   // Initialize theme
   useEffect(() => {
@@ -25,6 +26,28 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Scroll to new items when companies array grows
+  useEffect(() => {
+    if (companies.length > previousCompanyCountRef.current && previousCompanyCountRef.current > 0) {
+        // We added new items. Try to scroll the first new item into view.
+        // We use a small timeout to allow DOM to render
+        setTimeout(() => {
+            const container = document.getElementById('results-container');
+            if (container) {
+                // Option 1: Scroll to the bottom gently
+                // container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                
+                // Option 2: Scroll to maintain the user's focus on the flow. 
+                // Actually, standard behavior is usually just append.
+                // If the user feels "output is up", maybe they are confused by the loading state.
+                // Let's ensure we are scrolled to the bottom where the "Load More" button was.
+                 container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            }
+        }, 100);
+    }
+    previousCompanyCountRef.current = companies.length;
+  }, [companies]);
+
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   // Mouse tracking for spotlight effect
@@ -35,20 +58,26 @@ const App: React.FC = () => {
     document.documentElement.style.setProperty('--mouse-y', `${y}px`);
   }, []);
 
-  const handleSearch = async (industry: string, city: string) => {
-    if (!industry || !city) return;
-    
-    currentSearchRef.current = { industry, city };
+  const handleSearch = async (mode: SearchMode, p1: string, p2: string) => {
     setIsSearching(true);
     setCompanies([]); // Clear previous results for new search
+    previousCompanyCountRef.current = 0;
     
+    const params: SearchParams = {
+        mode,
+        industry: mode === 'discovery' ? p1 : undefined,
+        city: p2,
+        companyName: mode === 'lookup' ? p1 : undefined
+    };
+    currentSearchParamsRef.current = params;
+
     try {
-      const newLeads = await findLeads(industry, city);
+      const newLeads = await findLeads(params);
       setCompanies(newLeads);
       if (newLeads.length > 0) {
         setSelectedCompanyId(null); 
       } else {
-        alert(`No leads found for ${industry} in ${city}. Try a broader search.`);
+        alert(`No leads found. Try a broader search.`);
       }
     } catch (error: any) {
       console.error("Search failed", error);
@@ -59,14 +88,19 @@ const App: React.FC = () => {
   };
 
   const handleLoadMore = async () => {
-    const { industry, city } = currentSearchRef.current;
-    if (!industry || !city) return;
+    if (!currentSearchParamsRef.current || currentSearchParamsRef.current.mode === 'lookup') return;
 
     setIsSearching(true);
     try {
       // Pass existing names to exclude them from next batch
-      const existingNames = companies.map(c => c.name);
-      const moreLeads = await findLeads(industry, city, existingNames);
+      const excludeNames = companies.map(c => c.name);
+      
+      const params: SearchParams = {
+          ...currentSearchParamsRef.current,
+          excludeNames
+      };
+
+      const moreLeads = await findLeads(params);
       
       if (moreLeads.length === 0) {
         alert("No more unique leads found in this area.");

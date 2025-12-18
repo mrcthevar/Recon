@@ -1,4 +1,4 @@
-import { PitchParams, Company } from "../types";
+import { PitchParams, Company, SearchParams } from "../types";
 
 export const generatePitch = async (params: PitchParams): Promise<string> => {
   try {
@@ -29,12 +29,12 @@ export const generatePitch = async (params: PitchParams): Promise<string> => {
   }
 };
 
-export const findLeads = async (industry: string, city: string, excludeNames: string[] = []): Promise<Company[]> => {
+export const findLeads = async (params: SearchParams): Promise<Company[]> => {
   try {
     const response = await fetch('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ industry, city, excludeNames }),
+      body: JSON.stringify(params),
     });
 
     const contentType = response.headers.get("content-type");
@@ -45,13 +45,12 @@ export const findLeads = async (industry: string, city: string, excludeNames: st
         }
         return data.leads || [];
     } else {
-        // Handle non-JSON response (e.g., 404 HTML page or 500 crash page)
         const text = await response.text();
         console.error("Leads API Error (Non-JSON):", text);
         
         let msg = `Server Error (${response.status})`;
-        if (response.status === 404) msg = "API Endpoint Not Found (404). If running locally, use 'wrangler pages dev'.";
-        else if (response.status === 500) msg = "Internal Server Error (500). Check Cloudflare logs.";
+        if (response.status === 404) msg = "API Endpoint Not Found (404).";
+        else if (response.status === 500) msg = "Internal Server Error (500).";
         
         throw new Error(msg);
     }

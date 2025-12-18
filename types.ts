@@ -24,6 +24,16 @@ export interface PitchParams {
   tone: 'Professional' | 'Casual' | 'Bold';
 }
 
+export type SearchMode = 'discovery' | 'lookup';
+
+export interface SearchParams {
+  mode: SearchMode;
+  industry?: string;
+  city: string;
+  companyName?: string;
+  excludeNames?: string[];
+}
+
 export interface FileData {
   file: File;
   previewUrl: string;
