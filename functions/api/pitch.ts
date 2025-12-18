@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
 // We redefine constants here to ensure the serverless function is self-contained
-// and doesn't rely on frontend build path aliases.
 const MODEL_NAME = 'gemini-3-flash-preview';
 const SYSTEM_INSTRUCTION = `
 You are Recon, an elite sales strategist for high-end creative freelancers (cinematographers, editors, designers).
@@ -23,6 +22,11 @@ interface Env {
 
 export const onRequestPost = async (context: any) => {
   try {
+     // Polyfill process for libraries that expect it
+    if (typeof process === 'undefined') {
+      (globalThis as any).process = { env: {} };
+    }
+
     const { request, env } = context;
     
     // 1. Security Check
@@ -78,7 +82,8 @@ export const onRequestPost = async (context: any) => {
 
   } catch (error: any) {
     console.error("Backend Error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal Server Error" }), {
+    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

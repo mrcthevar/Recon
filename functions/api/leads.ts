@@ -6,19 +6,31 @@ interface Env {
 
 export const onRequestPost = async (context: any) => {
   try {
+    // Polyfill process for libraries that expect it
+    if (typeof process === 'undefined') {
+      (globalThis as any).process = { env: {} };
+    }
+
     const { request, env } = context;
 
     if (!env.API_KEY) {
       console.error("API_KEY not found in environment variables");
-      return new Response(JSON.stringify({ error: "Server Configuration Error: API Key missing in Cloudflare" }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Server Configuration Error: API Key missing in Cloudflare" }), { 
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     const { industry, city } = await request.json();
 
     if (!industry || !city) {
-      return new Response(JSON.stringify({ error: "Industry and City are required" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Industry and City are required" }), { 
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
+    // Initialize AI
     const ai = new GoogleGenAI({ apiKey: env.API_KEY });
     
     // Maps Grounding requires Gemini 2.5 series
@@ -53,7 +65,11 @@ export const onRequestPost = async (context: any) => {
     console.log("Gemini Response Text:", text);
 
     if (!text) {
-      throw new Error("AI returned empty response. Maps tool might have failed to find locations.");
+      // Return a safe empty list instead of crashing
+       return new Response(JSON.stringify({ leads: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
     }
     
     // Parse the pipe-separated text response
@@ -90,11 +106,6 @@ export const onRequestPost = async (context: any) => {
         };
       });
 
-    if (leads.length === 0) {
-        console.warn("No leads parsed from text:", text);
-        return new Response(JSON.stringify({ leads: [], debug: text }), { status: 200 });
-    }
-
     return new Response(JSON.stringify({ leads }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
@@ -102,8 +113,9 @@ export const onRequestPost = async (context: any) => {
 
   } catch (error: any) {
     console.error("Leads API Critical Error:", error);
-    const errorMessage = error.message || "Unknown Server Error";
-    return new Response(JSON.stringify({ error: errorMessage }), { 
+    // Ensure we return JSON even on crash
+    const errorMessage = error instanceof Error ? error.message : "Unknown Server Error";
+    return new Response(JSON.stringify({ error: errorMessage, stack: error.stack }), { 
         status: 500,
         headers: { "Content-Type": "application/json" }
     });
