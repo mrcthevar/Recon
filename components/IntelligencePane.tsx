@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase, ChevronRight, Search, FileText } from 'lucide-react';
+import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase, UserPlus, Search, FileText } from 'lucide-react';
 import { Company, Pitch } from '../types';
 import { generatePitch } from '../services/geminiService';
 
@@ -11,6 +11,7 @@ interface IntelligencePaneProps {
 }
 
 type Tab = 'overview' | 'insights' | 'outreach';
+type PitchFormat = 'email' | 'linkedin_connect' | 'linkedin_inmail';
 
 export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onToggleSave, isSaved }) => {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -20,6 +21,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
   const [activePitchIndex, setActivePitchIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [pitchFormat, setPitchFormat] = useState<PitchFormat>('email');
 
   React.useEffect(() => {
     setGeneratedPitches([]);
@@ -28,13 +30,21 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
     setActiveTab('overview');
   }, [company?.id]);
 
+  const handleFormatChange = (format: PitchFormat) => {
+    setPitchFormat(format);
+    setGeneratedPitches([]);
+    setActivePitchIndex(0);
+    setIsEditing(false);
+  };
+
   const handleGenerate = async () => {
     if (!company || !skills) return;
 
     setIsGenerating(true);
     setGeneratedPitches([]);
+    setActivePitchIndex(0);
+    
     try {
-      // Pass the found signals to the pitcher for context
       const signalContext = company.signals.map(s => `${s.type}: ${s.text}`);
       
       const results = await generatePitch({
@@ -42,7 +52,8 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
         industry: company.industry,
         userSkills: skills,
         tone: 'Professional',
-        companySignals: signalContext
+        companySignals: signalContext,
+        format: pitchFormat
       });
       setGeneratedPitches(results);
     } catch (e) {
@@ -70,21 +81,13 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
   const getSocialLinks = () => {
     if (!company || !company.socials || company.socials === 'N/A' || company.socials === 'None') return [];
     
-    // Split by spaces, commas, or newlines to handle various AI outputs
     return company.socials
       .split(/[\s,\n]+/)
       .map(s => s.trim())
       .filter(s => s.length > 0 && !s.toLowerCase().includes('n/a'))
       .map((rawLink, index) => {
-        // Clean potential markdown or brackets formatting
         let url = rawLink.replace(/[\[\]()]/g, '');
-        
-        // Ensure protocol exists
-        if (!url.startsWith('http')) {
-            url = `https://${url}`;
-        }
-        
-        // Basic validation: must include a dot and have minimal length to be a URL
+        if (!url.startsWith('http')) url = `https://${url}`;
         if (!url.includes('.') || url.length < 8) return null;
 
         let icon = <LinkIcon className="w-4 h-4" />;
@@ -142,7 +145,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                     </div>
                     <div>
                         <h4 className="text-sm font-bold text-neutral-900 dark:text-white">3. Outreach</h4>
-                        <p className="text-xs text-neutral-500 mt-1">Use the Outreach tab to generate AI-personalized emails based on your unique skills.</p>
+                        <p className="text-xs text-neutral-500 mt-1">Use the Outreach tab to generate AI-personalized emails or LinkedIn messages based on your skills.</p>
                     </div>
                 </div>
             </div>
@@ -281,6 +284,31 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
         {/* TAB: OUTREACH (COMMS) */}
         {activeTab === 'outreach' && (
             <div className="h-full flex flex-col animate-fade-in">
+                
+                <div className="flex flex-wrap items-center gap-2 mb-4 bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-lg border border-neutral-200 dark:border-white/5 w-fit">
+                    <button 
+                        onClick={() => handleFormatChange('email')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${pitchFormat === 'email' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                    >
+                        <Mail className="w-3.5 h-3.5" />
+                        Email
+                    </button>
+                    <button 
+                        onClick={() => handleFormatChange('linkedin_inmail')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${pitchFormat === 'linkedin_inmail' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                    >
+                        <Linkedin className="w-3.5 h-3.5" />
+                        InMail
+                    </button>
+                    <button 
+                        onClick={() => handleFormatChange('linkedin_connect')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${pitchFormat === 'linkedin_connect' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                    >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Connect
+                    </button>
+                </div>
+
                 <div className="mb-4">
                     <label className="text-xs font-bold text-neutral-500 uppercase mb-2 block">Your Offer / Skills</label>
                     <div className="flex gap-2">
@@ -316,11 +344,29 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                             ))}
                         </div>
                         <div className="flex-1 p-4 overflow-y-auto">
-                             <div className="mb-3">
-                                <span className="text-[10px] font-bold text-neutral-400 uppercase">Subject</span>
-                                <p className="text-sm font-medium text-neutral-900 dark:text-white select-all">{currentPitch.subject}</p>
-                             </div>
-                             <div className="h-px bg-neutral-100 dark:bg-white/5 my-3"></div>
+                             {pitchFormat !== 'linkedin_connect' && (
+                                <div className="mb-3">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-[10px] font-bold text-neutral-400 uppercase">Subject</span>
+                                    </div>
+                                    {isEditing ? (
+                                        <input 
+                                            type="text"
+                                            value={currentPitch.subject}
+                                            onChange={(e) => {
+                                                const newPitches = [...generatedPitches];
+                                                newPitches[activePitchIndex].subject = e.target.value;
+                                                setGeneratedPitches(newPitches);
+                                            }}
+                                            className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-white/10 rounded px-2 py-1.5 text-sm font-medium text-neutral-900 dark:text-white focus:outline-none focus:border-accent"
+                                        />
+                                    ) : (
+                                        <p className="text-sm font-medium text-neutral-900 dark:text-white select-all">{currentPitch.subject}</p>
+                                    )}
+                                    <div className="h-px bg-neutral-100 dark:bg-white/5 my-3"></div>
+                                </div>
+                             )}
+                             
                              {isEditing ? (
                                 <textarea 
                                     value={currentPitch.body}
@@ -338,14 +384,23 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                              )}
                         </div>
                          <div className="p-2 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-black/20 flex justify-between items-center">
-                             <button onClick={() => setIsEditing(!isEditing)} className="p-2 hover:bg-neutral-200 dark:hover:bg-white/10 rounded text-neutral-500" title="Edit Text">
-                                 <Edit3 className="w-4 h-4" />
-                             </button>
+                             <div className="flex gap-2 items-center">
+                                <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded transition-colors ${isEditing ? 'bg-accent/10 text-accent' : 'hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-500'}`} title={isEditing ? "Finish Editing" : "Edit Text"}>
+                                    <Edit3 className="w-4 h-4" />
+                                </button>
+                                {pitchFormat === 'linkedin_connect' && (
+                                    <span className={`text-[10px] font-mono ${currentPitch.body.length > 300 ? 'text-red-500 font-bold' : 'text-neutral-400'}`}>
+                                        {currentPitch.body.length}/300
+                                    </span>
+                                )}
+                             </div>
                              <div className="flex gap-2">
-                                <a href={`mailto:${company.email}?subject=${encodeURIComponent(currentPitch.subject)}&body=${encodeURIComponent(currentPitch.body)}`} className="p-2 rounded hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white" title="Open Mail Client">
-                                    <Mail className="w-4 h-4" />
-                                </a>
-                                <button onClick={() => copyToClipboard(`Subject: ${currentPitch.subject}\n\n${currentPitch.body}`)} className="flex items-center gap-2 px-3 py-1.5 rounded bg-accent text-white shadow-sm hover:bg-accent-glow text-xs font-bold uppercase transition-colors">
+                                {pitchFormat === 'email' && (
+                                    <a href={`mailto:${company.email}?subject=${encodeURIComponent(currentPitch.subject)}&body=${encodeURIComponent(currentPitch.body)}`} className="p-2 rounded hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white" title="Open Mail Client">
+                                        <Mail className="w-4 h-4" />
+                                    </a>
+                                )}
+                                <button onClick={() => copyToClipboard((pitchFormat === 'email' || pitchFormat === 'linkedin_inmail') ? `Subject: ${currentPitch.subject}\n\n${currentPitch.body}` : currentPitch.body)} className="flex items-center gap-2 px-3 py-1.5 rounded bg-accent text-white shadow-sm hover:bg-accent-glow text-xs font-bold uppercase transition-colors">
                                     {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                                     <span>{copied ? 'Copied' : 'Copy'}</span>
                                 </button>
@@ -355,7 +410,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                 ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-neutral-400 opacity-50 border-2 border-dashed border-neutral-200 dark:border-white/5 rounded-xl">
                         <Bot className="w-6 h-6 mb-2" />
-                        <span className="text-xs">Enter skills to generate email drafts</span>
+                        <span className="text-xs">Enter skills to generate messages</span>
                      </div>
                 )}
             </div>

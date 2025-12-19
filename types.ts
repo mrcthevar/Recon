@@ -1,4 +1,5 @@
 
+
 export interface Signal {
   type: string;
   text: string;
@@ -46,6 +47,7 @@ export interface PitchParams {
   userSkills: string;
   tone: 'Professional' | 'Casual' | 'Bold';
   companySignals?: string[]; // New: Pass signals to context
+  format?: 'email' | 'linkedin_connect' | 'linkedin_inmail';
 }
 
 export type SearchMode = 'discovery' | 'lookup';

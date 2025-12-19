@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface Env {
   API_KEY: string;
@@ -30,118 +30,90 @@ export const onRequestPost = async (context: any) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    
-    // Using Gemini 3 Flash Preview for optimal speed and search grounding support
     const model = 'gemini-3-flash-preview';
 
     const exclusionList = excludeNames && excludeNames.length > 0 ? excludeNames.join(', ') : "None";
 
-    let prompt = '';
-    
-    const jsonStructure = `
-    {
-      "leads": [
-        {
-          "name": "string",
-          "website": "string (Full URL starting with https://)",
-          "location": "string",
-          "description": "string (Max 15 words)",
-          "needs": ["string (Key needs only)"],
-          "heroProduct": "string",
-          "phone": "string (MUST TRY TO FIND - SEARCH HARD)",
-          "email": "string (MUST TRY TO FIND - SEARCH HARD)",
-          "socials": "string (Space separated FULL URLs starting with https:// - REQUIRED)",
-          "hotScore": number (0-100),
-          "signals": [
-            { 
-               "type": "string", 
-               "text": "string (Concise evidence)",
-               "confidence": "High" | "Medium" | "Low"
-            }
-          ]
-        }
-      ]
-    }
-    `;
-
-    // SYSTEM INSTRUCTION: Sets the baseline behavior to be aggressive about contacts
     const systemInstruction = `
       You are an expert Lead Generation AI agent.
-      
-      CORE DIRECTIVE: You MUST prioritize finding CONTACT INFORMATION (Phone, Email, Social Links) above all else.
+      CORE DIRECTIVE: Prioritize finding CONTACT INFORMATION (Phone, Email, Social Links).
       
       SEARCH RULES:
-      1. Always search for "[Company] contact phone email".
-      2. Always search for "[Company] facebook instagram linkedin" to find social profiles, as they often contain phone numbers/emails missing from websites.
-      3. If a direct email is missing, look for "info@", "hello@", or "contact@" addresses on their homepage or social media.
-      4. Do not return "N/A" for Phone or Email unless you have verified it does not exist on their Website, Facebook, AND Instagram.
-      5. Ensure all website and social URLs are FULL and VALID (start with https://).
+      1. Use the googleSearch tool to find the company website, linkedin, and contact pages.
+      2. If a direct email is missing, look for generic ones (info@, hello@).
+      3. Do not return "N/A" unless you have verified it does not exist.
+      4. Ensure all URLs are full and valid (https://).
     `;
 
+    let prompt = '';
     if (mode === 'lookup') {
-        prompt = `
-            DEEP OSINT TASK: Target "${companyName}" in "${city || 'any location'}".
-            
-            OBJECTIVE: Find confirmed contact details (Phone, Email, Socials).
-            
-            PROTOCOL:
-            1. Search for official website.
-            2. Search for "${companyName} contact email phone".
-            3. Search for "${companyName} LinkedIn" or Facebook to find contact info in profiles.
-            
-            Return JSON only. Structure:
-            ${jsonStructure}
-        `;
+        prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details, key needs, and social profiles.`;
     } else {
-        prompt = `
-            SCOUT MISSION: Find 5 ACTIVE ${industry} companies in ${city}.
-            Exclude: ${exclusionList}.
-            
-            CRITICAL: For every lead found, you must perform a secondary search for their contact info.
-            
-            PROTOCOL:
-            1. SEARCH: "${industry} companies ${city} directory".
-            2. FOR EACH LEAD:
-               - Search for "[Lead Name] ${city} phone email social media".
-               - Check the snippets for phone numbers (look for local area codes).
-               - Check the snippets for emails (look for @ symbol).
-            
-            Return JSON only. Structure:
-            ${jsonStructure}
-        `;
+        prompt = `Find 5 ACTIVE ${industry} companies in ${city}. Exclude: ${exclusionList}. For every lead, find specific contact info and key business needs.`;
     }
+
+    // Strict Schema Definition
+    const schema = {
+      type: Type.OBJECT,
+      properties: {
+        leads: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              website: { type: Type.STRING },
+              location: { type: Type.STRING },
+              description: { type: Type.STRING },
+              needs: { 
+                type: Type.ARRAY, 
+                items: { type: Type.STRING } 
+              },
+              heroProduct: { type: Type.STRING },
+              phone: { type: Type.STRING },
+              email: { type: Type.STRING },
+              socials: { type: Type.STRING, description: "Space separated full URLs" },
+              hotScore: { type: Type.INTEGER },
+              signals: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    type: { type: Type.STRING },
+                    text: { type: Type.STRING },
+                    confidence: { type: Type.STRING, enum: ["High", "Medium", "Low"] }
+                  },
+                  required: ["type", "text", "confidence"]
+                }
+              }
+            },
+            required: ["name", "website", "description", "hotScore", "email"]
+          }
+        }
+      },
+      required: ["leads"]
+    };
 
     const response = await ai.models.generateContent({
       model,
       contents: prompt,
       config: {
-        tools: [
-            { googleSearch: {} } 
-        ],
+        tools: [{ googleSearch: {} }],
         temperature: 0.4,
-        systemInstruction: systemInstruction
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: schema
       },
     });
 
-    let text = response.text || "{}";
-    
-    // Robust JSON extraction
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const firstBrace = text.indexOf('{');
-    const lastBrace = text.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1) {
-        text = text.substring(firstBrace, lastBrace + 1);
-    }
-
+    // With responseSchema, response.text is guaranteed to be valid JSON structure
     let data;
     try {
-        data = JSON.parse(text);
+        data = JSON.parse(response.text || "{}");
     } catch (e) {
-        console.error("JSON Parse Error on text:", text);
-        return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { 
-            status: 500,
-            headers: { "Content-Type": "application/json" }
-        });
+        // Fallback for extremely rare edge cases
+        console.error("JSON Parse Error:", response.text);
+        throw new Error("Invalid JSON response from AI");
     }
 
     const leads = (data.leads || []).map((lead: any, index: number) => ({
@@ -165,7 +137,6 @@ export const onRequestPost = async (context: any) => {
             uri: chunk.web?.uri
         }))
         .filter((s: any) => s.uri)
-        // Deduplicate sources
         .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => (t.uri === v.uri)) === i);
 
     return new Response(JSON.stringify({ leads, sources }), {
@@ -181,3 +152,4 @@ export const onRequestPost = async (context: any) => {
     });
   }
 };
+    
