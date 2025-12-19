@@ -1,3 +1,4 @@
+
 import { PitchParams, Company, SearchParams, Pitch } from "../types";
 
 export const generatePitch = async (params: PitchParams): Promise<Pitch[]> => {
@@ -29,12 +30,13 @@ export const generatePitch = async (params: PitchParams): Promise<Pitch[]> => {
   }
 };
 
-export const findLeads = async (params: SearchParams): Promise<Company[]> => {
+export const findLeads = async (params: SearchParams, signal?: AbortSignal): Promise<Company[]> => {
   try {
     const response = await fetch('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
+      signal // Pass the abort signal to the fetch request
     });
 
     const contentType = response.headers.get("content-type");
@@ -55,7 +57,11 @@ export const findLeads = async (params: SearchParams): Promise<Company[]> => {
         throw new Error(msg);
     }
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      // Ignore abort errors, they are intentional
+      throw error; 
+    }
     console.error("Recon Discovery Error:", error);
     throw error;
   }

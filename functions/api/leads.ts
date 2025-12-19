@@ -31,8 +31,8 @@ export const onRequestPost = async (context: any) => {
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
     
-    // Gemini 2.5 Flash is the fastest model for Search Grounding
-    const model = 'gemini-2.5-flash';
+    // Using Gemini 3 Flash Preview for optimal speed and search grounding support
+    const model = 'gemini-3-flash-preview';
 
     const exclusionList = excludeNames && excludeNames.length > 0 ? excludeNames.join(', ') : "None";
 

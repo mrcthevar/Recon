@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { SearchPane } from './components/SearchPane';
@@ -19,11 +20,17 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Pre-fetching State
+  const [nextBatch, setNextBatch] = useState<Company[]>([]);
+  const [isPrefetching, setIsPrefetching] = useState(false);
+
   const [isSearching, setIsSearching] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   
   const currentSearchParamsRef = useRef<SearchParams | null>(null);
-  const previousCompanyCountRef = useRef(0);
+  
+  // Abort Controller Ref to handle cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Initialize theme
   useEffect(() => {
@@ -51,10 +58,42 @@ const App: React.FC = () => {
     document.documentElement.style.setProperty('--mouse-y', `${y}px`);
   }, []);
 
+  // BACKGROUND TASK: Prefetch the next 5 leads
+  const prefetchNextBatch = async (currentResults: Company[], params: SearchParams) => {
+    if (params.mode === 'lookup') return; // Don't prefetch for single lookups
+    
+    setIsPrefetching(true);
+    try {
+        // Exclude everything we currently see AND everything saved
+        const excludeNames = [...currentResults.map(c => c.name), ...savedCompanies.map(c => c.name)];
+        const nextParams = { ...params, excludeNames };
+        
+        // We use the same abort controller logic? 
+        // No, we want prefetch to be cancelable if a NEW search starts, but not if just idling.
+        // If a new search starts, abortControllerRef.current.abort() is called below, which kills this too if we share the controller.
+        
+        const nextLeads = await findLeads(nextParams, abortControllerRef.current?.signal);
+        setNextBatch(nextLeads);
+    } catch (error: any) {
+        if (error.name !== 'AbortError') {
+            console.log("Prefetch suspended or failed (non-critical).");
+        }
+    } finally {
+        setIsPrefetching(false);
+    }
+  };
+
   const handleSearch = async (mode: SearchMode, p1: string, p2: string) => {
+    // 1. STOP EVERYTHING: Abort any ongoing search or pre-fetch
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+    }
+    // 2. Create new controller for this session
+    abortControllerRef.current = new AbortController();
+
     setIsSearching(true);
     setSearchResults([]); 
-    previousCompanyCountRef.current = 0;
+    setNextBatch([]); // Clear buffer
     setSelectedCompanyId(null);
     
     const params: SearchParams = {
@@ -62,40 +101,73 @@ const App: React.FC = () => {
         industry: mode === 'discovery' ? p1 : undefined,
         city: p2,
         companyName: mode === 'lookup' ? p1 : undefined,
-        // Exclude saved companies from new search results to avoid dupes
         excludeNames: savedCompanies.map(c => c.name)
     };
     currentSearchParamsRef.current = params;
 
     try {
-      const newLeads = await findLeads(params);
+      const newLeads = await findLeads(params, abortControllerRef.current.signal);
       setSearchResults(newLeads);
+      
       if (newLeads.length === 0) {
         alert(`No leads found. Try a broader search.`);
+      } else {
+        // 3. SUCCESS? IMMEDIATELY START PRE-FETCHING NEXT BATCH
+        // We pass 'newLeads' directly because state updates are async
+        prefetchNextBatch(newLeads, params);
       }
     } catch (error: any) {
-      console.error("Search failed", error);
-      alert(error.message || "Could not find leads.");
+      if (error.name === 'AbortError') {
+          console.log("Search aborted by user.");
+      } else {
+          console.error("Search failed", error);
+          alert(error.message || "Could not find leads.");
+      }
     } finally {
-      setIsSearching(false);
+      // Only turn off searching spinner if we aren't aborted (which implies a new search started)
+      if (!abortControllerRef.current?.signal.aborted) {
+          setIsSearching(false);
+      }
     }
   };
 
   const handleLoadMore = async () => {
     if (!currentSearchParamsRef.current || currentSearchParamsRef.current.mode === 'lookup') return;
+    
+    // STRATEGY: Instant Load if buffer is ready
+    if (nextBatch.length > 0) {
+        const newBatch = [...nextBatch];
+        setNextBatch([]); // Clear buffer immediately
+        setSearchResults(prev => {
+            const updated = [...prev, ...newBatch];
+            // Trigger NEXT prefetch based on updated list
+            prefetchNextBatch(updated, currentSearchParamsRef.current!); 
+            return updated;
+        });
+        return;
+    }
+
+    // Fallback: Buffer wasn't ready (network slow?), so we show spinner and wait
     setIsSearching(true);
     try {
       const excludeNames = [...searchResults.map(c => c.name), ...savedCompanies.map(c => c.name)];
       const params: SearchParams = { ...currentSearchParamsRef.current, excludeNames };
-      const moreLeads = await findLeads(params);
+      
+      const moreLeads = await findLeads(params, abortControllerRef.current?.signal);
       
       if (moreLeads.length === 0) {
         alert("No more unique leads found in this area.");
       } else {
-        setSearchResults(prev => [...prev, ...moreLeads]);
+        setSearchResults(prev => {
+            const updated = [...prev, ...moreLeads];
+            prefetchNextBatch(updated, currentSearchParamsRef.current!);
+            return updated;
+        });
       }
     } catch (error: any) {
-      alert(error.message || "Failed to load more leads.");
+       if (error.name !== 'AbortError') {
+          alert(error.message || "Failed to load more leads.");
+       }
     } finally {
       setIsSearching(false);
     }
@@ -109,8 +181,6 @@ const App: React.FC = () => {
         // Add
         const newCompany = { ...company, status: 'Saved' as const };
         setSavedCompanies(prev => [newCompany, ...prev]);
-        // Optionally remove from search results if you want them to 'move' to sidebar
-        // setSearchResults(prev => prev.filter(c => c.id !== company.id));
     }
   };
 
