@@ -24,6 +24,16 @@ export interface Company {
   location: string;
 }
 
+export interface Source {
+  title: string;
+  uri: string;
+}
+
+export interface SearchResult {
+  leads: Company[];
+  sources: Source[];
+}
+
 export interface Pitch {
   angle: string;
   subject: string;

@@ -1,5 +1,5 @@
 
-import { PitchParams, Company, SearchParams, Pitch } from "../types";
+import { PitchParams, Company, SearchParams, Pitch, SearchResult } from "../types";
 
 export const generatePitch = async (params: PitchParams): Promise<Pitch[]> => {
   try {
@@ -30,7 +30,7 @@ export const generatePitch = async (params: PitchParams): Promise<Pitch[]> => {
   }
 };
 
-export const findLeads = async (params: SearchParams, signal?: AbortSignal): Promise<Company[]> => {
+export const findLeads = async (params: SearchParams, signal?: AbortSignal): Promise<SearchResult> => {
   try {
     const response = await fetch('/api/leads', {
       method: 'POST',
@@ -45,7 +45,10 @@ export const findLeads = async (params: SearchParams, signal?: AbortSignal): Pro
         if (!response.ok) {
             throw new Error(data.error || `Discovery Failed: ${response.statusText}`);
         }
-        return data.leads || [];
+        return {
+            leads: data.leads || [],
+            sources: data.sources || []
+        };
     } else {
         const text = await response.text();
         console.error("Leads API Error (Non-JSON):", text);

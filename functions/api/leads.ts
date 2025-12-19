@@ -157,7 +157,18 @@ export const onRequestPost = async (context: any) => {
         location: lead.location || city
     }));
 
-    return new Response(JSON.stringify({ leads }), {
+    // Extract Grounding Chunks (Sources)
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const sources = groundingChunks
+        .map((chunk: any) => ({
+            title: chunk.web?.title || "Web Source",
+            uri: chunk.web?.uri
+        }))
+        .filter((s: any) => s.uri)
+        // Deduplicate sources
+        .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => (t.uri === v.uri)) === i);
+
+    return new Response(JSON.stringify({ leads, sources }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase } from 'lucide-react';
+import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase, ChevronRight, Search, FileText } from 'lucide-react';
 import { Company, Pitch } from '../types';
 import { generatePitch } from '../services/geminiService';
 
@@ -103,12 +103,50 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
 
   if (!company) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-neutral-400 select-none">
-        <div className="w-20 h-20 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-6 ring-1 ring-neutral-200 dark:ring-white/5">
-          <Target className="w-8 h-8 opacity-20" />
-        </div>
-        <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-2">Company Selection Required</h3>
-        <p className="text-sm max-w-xs text-center leading-relaxed opacity-60">Select a lead from the list or your saved items to view company details.</p>
+      <div className="h-full flex flex-col items-center justify-center text-neutral-400 select-none bg-neutral-50/50 dark:bg-black/20">
+         <div className="max-w-md p-8">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-accent/10 rounded-xl">
+                    <Target className="w-8 h-8 text-accent" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Welcome to Recon</h2>
+                    <p className="text-sm text-neutral-500">Intelligence Suite for Lead Generation</p>
+                </div>
+            </div>
+            
+            <div className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-white dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-white/5 shadow-sm">
+                    <div className="mt-1 p-1.5 bg-blue-500/10 rounded-lg">
+                        <Search className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">1. Discover</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Search by Industry & City (e.g., "SaaS in Austin") or Lookup specific companies.</p>
+                    </div>
+                </div>
+                
+                 <div className="flex items-start gap-4 p-4 bg-white dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-white/5 shadow-sm">
+                    <div className="mt-1 p-1.5 bg-purple-500/10 rounded-lg">
+                        <FileText className="w-4 h-4 text-purple-500" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">2. Analyze</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Select a lead to view verified contact info, growth signals, and key decision data.</p>
+                    </div>
+                </div>
+
+                 <div className="flex items-start gap-4 p-4 bg-white dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-white/5 shadow-sm">
+                    <div className="mt-1 p-1.5 bg-green-500/10 rounded-lg">
+                        <Send className="w-4 h-4 text-green-500" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">3. Outreach</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Use the Outreach tab to generate AI-personalized emails based on your unique skills.</p>
+                    </div>
+                </div>
+            </div>
+         </div>
       </div>
     );
   }
@@ -291,7 +329,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                                         newPitches[activePitchIndex].body = e.target.value;
                                         setGeneratedPitches(newPitches);
                                     }}
-                                    className="w-full h-40 bg-transparent resize-none focus:outline-none text-sm leading-relaxed p-0"
+                                    className="w-full h-40 bg-transparent resize-none focus:outline-none text-sm leading-relaxed p-0 text-neutral-600 dark:text-neutral-300"
                                 />
                              ) : (
                                 <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed select-all">
@@ -300,15 +338,16 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                              )}
                         </div>
                          <div className="p-2 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-black/20 flex justify-between items-center">
-                             <button onClick={() => setIsEditing(!isEditing)} className="p-2 hover:bg-neutral-200 dark:hover:bg-white/10 rounded text-neutral-500">
+                             <button onClick={() => setIsEditing(!isEditing)} className="p-2 hover:bg-neutral-200 dark:hover:bg-white/10 rounded text-neutral-500" title="Edit Text">
                                  <Edit3 className="w-4 h-4" />
                              </button>
                              <div className="flex gap-2">
-                                <a href={`mailto:${company.email}?subject=${encodeURIComponent(currentPitch.subject)}&body=${encodeURIComponent(currentPitch.body)}`} className="p-2 rounded hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white">
+                                <a href={`mailto:${company.email}?subject=${encodeURIComponent(currentPitch.subject)}&body=${encodeURIComponent(currentPitch.body)}`} className="p-2 rounded hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white" title="Open Mail Client">
                                     <Mail className="w-4 h-4" />
                                 </a>
-                                <button onClick={() => copyToClipboard(`Subject: ${currentPitch.subject}\n\n${currentPitch.body}`)} className="p-2 rounded bg-accent text-white shadow-sm hover:bg-accent-glow">
-                                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                <button onClick={() => copyToClipboard(`Subject: ${currentPitch.subject}\n\n${currentPitch.body}`)} className="flex items-center gap-2 px-3 py-1.5 rounded bg-accent text-white shadow-sm hover:bg-accent-glow text-xs font-bold uppercase transition-colors">
+                                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                    <span>{copied ? 'Copied' : 'Copy'}</span>
                                 </button>
                              </div>
                         </div>

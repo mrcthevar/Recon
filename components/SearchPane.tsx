@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Plus, Building2, Flame } from 'lucide-react';
-import { Company, SearchMode } from '../types';
+import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Plus, Building2, Flame, ExternalLink } from 'lucide-react';
+import { Company, SearchMode, Source } from '../types';
 
 interface SearchPaneProps {
   companies: Company[];
+  sources?: Source[];
   selectedCompanyId: string | null;
   onSelectCompany: (id: string) => void;
   onSearch?: (mode: SearchMode, p1: string, p2: string) => void;
@@ -13,7 +14,8 @@ interface SearchPaneProps {
 }
 
 export const SearchPane: React.FC<SearchPaneProps> = ({ 
-  companies, 
+  companies,
+  sources = [],
   selectedCompanyId, 
   onSelectCompany,
   onSearch,
@@ -276,6 +278,28 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                   <span className="font-mono text-xs uppercase tracking-wide animate-pulse">{loadingText}</span>
               ) : 'Load More Leads'}
            </button>
+        )}
+
+        {/* Verified Sources Footer */}
+        {sources.length > 0 && (
+          <div className="mt-6 pt-4 border-t border-neutral-200 dark:border-white/10 opacity-70 hover:opacity-100 transition-opacity">
+            <h4 className="text-[10px] font-bold uppercase text-neutral-500 mb-2">Verified Sources</h4>
+            <div className="flex flex-wrap gap-2">
+              {sources.map((source, idx) => (
+                <a 
+                  key={idx}
+                  href={source.uri}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[10px] text-neutral-600 dark:text-neutral-400 hover:text-accent hover:border-accent/30 transition-colors truncate max-w-full"
+                  title={source.title}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span className="truncate max-w-[150px]">{source.title || new URL(source.uri).hostname}</span>
+                </a>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>
