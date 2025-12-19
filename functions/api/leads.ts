@@ -38,7 +38,6 @@ export const onRequestPost = async (context: any) => {
 
     let prompt = '';
     
-    // We simplify the requested JSON reasoning fields to save generation tokens/time
     const jsonStructure = `
     {
       "leads": [
@@ -49,9 +48,9 @@ export const onRequestPost = async (context: any) => {
           "description": "string (Max 15 words)",
           "needs": ["string (Key needs only)"],
           "heroProduct": "string",
-          "phone": "string",
-          "email": "string",
-          "socials": "string",
+          "phone": "string (MUST TRY TO FIND)",
+          "email": "string (MUST TRY TO FIND)",
+          "socials": "string (Space separated URLs)",
           "hotScore": number (0-100),
           "signals": [
             { 
@@ -65,29 +64,41 @@ export const onRequestPost = async (context: any) => {
     }
     `;
 
-    // Prompt optimized for VELOCITY
+    // PROMPT ENGINEERING: Prioritize Contact Data Extraction
     if (mode === 'lookup') {
         prompt = `
-            FAST OSINT TASK: Target "${companyName}" in "${city || 'any location'}".
+            DEEP OSINT TASK: Target "${companyName}" in "${city || 'any location'}".
+            
+            OBJECTIVE: Find confirmed contact details (Phone, Email, Socials).
             
             PROTOCOL:
-            1. Use Google Search to find Official Website + Contact Page + Socials.
-            2. EXTRACT email/phone. Look for "info@", "hello@", or footer details.
-            3. Verify location via Search Snippets (do not use Maps tool).
+            1. Search for official website.
+            2. Search for "${companyName} contact email phone".
+            3. Search for "${companyName} LinkedIn" or Facebook to find contact info in profiles.
+            
+            EXTRACTION RULES:
+            - Phone: Look for local landlines or mobiles.
+            - Email: Look for generic (info@) or specific emails.
+            - Socials: Return full URLs.
             
             Return JSON only. Structure:
             ${jsonStructure}
         `;
     } else {
         prompt = `
-            FAST SCOUT MISSION: Find 5 ACTIVE ${industry} companies in ${city}.
+            SCOUT MISSION: Find 5 ACTIVE ${industry} companies in ${city}.
             Exclude: ${exclusionList}.
             
-            SPEED PROTOCOL:
-            1. SEARCH EFFICIENTLY: Use queries like "${industry} companies ${city} directory" or "top ${industry} agencies ${city}".
-            2. FOR EACH TARGET: Perform ONE targeted search for contact info (e.g. "Company Name email phone contact"). 
-            3. IGNORE companies with no web presence.
-            4. VERIFY location via search snippet.
+            CRITICAL: You MUST prioritize finding CONTACT INFO (Phone, Email) for every lead.
+            
+            PROTOCOL:
+            1. SEARCH: "${industry} companies ${city} contact email phone directory".
+            2. FOR EACH LEAD:
+               - Check the search snippet for phone numbers or emails.
+               - If not in snippet, assume they might be on the Facebook/LinkedIn page found in search.
+            3. DATA EXTRACTION:
+               - If specific email isn't found, look for "info@[domain]" pattern or "hello@[domain]".
+               - If phone isn't found, check for local listing snippets.
             
             Return JSON only. Structure:
             ${jsonStructure}
@@ -98,12 +109,10 @@ export const onRequestPost = async (context: any) => {
       model,
       contents: prompt,
       config: {
-        // OPTIMIZATION: Removed googleMaps to reduce latency. Search is sufficient for location verification.
         tools: [
             { googleSearch: {} } 
         ],
-        // Lower temperature for faster, more deterministic extraction
-        temperature: 0.3,
+        temperature: 0.4, // Increased slightly to allow for broader search interpretation
       },
     });
 
