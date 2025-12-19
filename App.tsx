@@ -4,9 +4,10 @@ import { Header } from './components/Header';
 import { SearchPane } from './components/SearchPane';
 import { IntelligencePane } from './components/IntelligencePane';
 import { Sidebar } from './components/Sidebar';
+import { VoiceMode } from './components/VoiceMode';
 import { Company, SearchMode, SearchParams, Source } from './types';
 import { findLeads } from './services/geminiService';
-import { Menu, ChevronRight, X } from 'lucide-react';
+import { Menu, ChevronRight, X, Mic } from 'lucide-react';
 
 // Simple Toast Component
 const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error' | 'info', onClose: () => void }) => {
@@ -41,6 +42,9 @@ const App: React.FC = () => {
   
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   
+  // Voice Mode State
+  const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
+
   // State for Live Results vs Saved Targets
   const [searchResults, setSearchResults] = useState<Company[]>([]);
   const [searchSources, setSearchSources] = useState<Source[]>([]);
@@ -247,13 +251,32 @@ const App: React.FC = () => {
       onMouseMove={handleMouseMove}
       className="h-screen bg-neutral-50 dark:bg-neutral-950 transition-colors duration-400 overflow-hidden flex flex-col relative"
     >
-      {/* Toast Container */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-          <div className="pointer-events-auto flex flex-col gap-2">
+      {/* Voice Mode Overlay */}
+      <VoiceMode 
+        isActive={isVoiceModeActive} 
+        onClose={() => setIsVoiceModeActive(false)} 
+        contextCompany={selectedCompany} 
+      />
+
+      {/* Floating Action Button for Voice */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end space-y-4 pointer-events-none">
+         {/* Toast Area */}
+         <div className="flex flex-col gap-2 pointer-events-auto items-end">
             {toasts.map(toast => (
                 <Toast key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
             ))}
-          </div>
+         </div>
+
+         {/* FAB */}
+         <button
+            onClick={() => setIsVoiceModeActive(true)}
+            className="pointer-events-auto group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-accent to-accent-glow text-white shadow-lg shadow-accent/40 hover:scale-110 hover:shadow-accent/60 transition-all duration-300 ease-out"
+            aria-label="Start Voice Assistant"
+         >
+            <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 animate-ping duration-1000"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-accent to-accent-glow opacity-80 blur-md"></div>
+            <Mic className="w-6 h-6 relative z-10 drop-shadow-sm" />
+         </button>
       </div>
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -262,7 +285,11 @@ const App: React.FC = () => {
       </div>
 
       <div className="relative z-10 flex flex-col h-full">
-        <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+        <Header 
+            isDarkMode={isDarkMode} 
+            toggleTheme={toggleTheme} 
+            onVoiceToggle={() => setIsVoiceModeActive(true)}
+        />
 
         <main className="flex-1 w-full max-w-screen-2xl mx-auto flex overflow-hidden">
           

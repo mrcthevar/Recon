@@ -1,12 +1,14 @@
+
 import React from 'react';
-import { Radar, Moon, Sun, Sparkles } from 'lucide-react';
+import { Radar, Moon, Sun, Sparkles, Mic } from 'lucide-react';
 
 interface HeaderProps {
   isDarkMode: boolean;
   toggleTheme: () => void;
+  onVoiceToggle: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ isDarkMode, toggleTheme }) => {
+export const Header: React.FC<HeaderProps> = ({ isDarkMode, toggleTheme, onVoiceToggle }) => {
   return (
     <header className="sticky top-0 z-50 transition-colors duration-300 border-b bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md border-neutral-200 dark:border-white/10">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -31,12 +33,13 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, toggleTheme }) => {
         
         {/* Controls */}
         <div className="flex items-center gap-4">
+          
           <div className="hidden md:flex items-center px-3 py-1 rounded-full bg-accent-dim border border-accent/20">
             <Sparkles className="w-3 h-3 text-accent mr-2 animate-pulse" />
             <span className="text-[10px] font-semibold text-accent uppercase tracking-wider">AI Powered</span>
           </div>
 
-          <div className="h-6 w-px bg-neutral-200 dark:bg-white/10"></div>
+          <div className="h-6 w-px bg-neutral-200 dark:bg-white/10 hidden md:block"></div>
 
           <button 
             onClick={toggleTheme}
