@@ -33,23 +33,32 @@ export const onRequestPost = async (context: any) => {
     const model = 'gemini-3-flash-preview';
 
     const exclusionList = excludeNames && excludeNames.length > 0 ? excludeNames.join(', ') : "None";
+    const today = new Date().toDateString();
 
     const systemInstruction = `
       You are an expert Lead Generation AI agent.
-      CORE DIRECTIVE: Prioritize finding CONTACT INFORMATION (Phone, Email, Social Links).
+      CURRENT DATE: ${today}.
+      
+      CORE DIRECTIVE: Prioritize finding CONTACT INFORMATION (Phone, Email, Social Links) and FRESH INTELLIGENCE.
       
       SEARCH RULES:
       1. Use the googleSearch tool to find the company website, linkedin, and contact pages.
-      2. If a direct email is missing, look for generic ones (info@, hello@).
-      3. Do not return "N/A" unless you have verified it does not exist.
-      4. Ensure all URLs are full and valid (https://).
+      2. FOR 'recentWork' AND 'signals': You MUST use Google Search to find data from the last 6 months. DO NOT use internal training data for news.
+      3. TIME CHECK: Compare found dates with CURRENT DATE (${today}). If an event happened in the past, do NOT label it "upcoming".
+      4. If a direct email is missing, look for generic ones (info@, hello@).
+      5. Do not return "N/A" unless you have verified it does not exist.
+      6. Ensure all URLs are full and valid (https://).
     `;
 
     let prompt = '';
     if (mode === 'lookup') {
-        prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details, key needs, and social profiles.`;
+        prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details. 
+        CRITICAL: Search for the absolute latest news, projects, or financial reports relative to ${today}. 
+        populate 'recentWork' and 'signals' with these real-time findings.`;
     } else {
-        prompt = `Find 5 ACTIVE ${industry} companies in ${city}. Exclude: ${exclusionList}. For every lead, find specific contact info and key business needs.`;
+        prompt = `Find 5 ACTIVE ${industry} companies in ${city}. Exclude: ${exclusionList}. 
+        For every lead, find specific contact info. 
+        CRITICAL: Search for their latest activities relative to ${today} for the 'recentWork' field.`;
     }
 
     // Strict Schema Definition
@@ -80,7 +89,7 @@ export const onRequestPost = async (context: any) => {
                   type: Type.OBJECT,
                   properties: {
                     type: { type: Type.STRING },
-                    text: { type: Type.STRING },
+                    text: { type: Type.STRING, description: "Must be a recent event or fact found via search." },
                     confidence: { type: Type.STRING, enum: ["High", "Medium", "Low"] }
                   },
                   required: ["type", "text", "confidence"]
