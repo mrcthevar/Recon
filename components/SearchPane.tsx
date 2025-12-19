@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Plus, Building2, Flame } from 'lucide-react';
 import { Company, SearchMode } from '../types';
 
@@ -29,13 +30,36 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   const [companyName, setCompanyName] = useState('');
   const [lookupCity, setLookupCity] = useState('');
 
+  // Loading Message State
+  const [loadingText, setLoadingText] = useState('Scouting...');
+  
+  useEffect(() => {
+    if (!isSearching) return;
+    
+    const messages = [
+        "Triangulating Sector...",
+        "Identifying Targets...",
+        "Scraping Comms...",
+        "Verifying Signals...",
+        "Compiling Dossier..."
+    ];
+    
+    let i = 0;
+    const interval = setInterval(() => {
+        setLoadingText(messages[i]);
+        i = (i + 1) % messages.length;
+    }, 1200);
+    
+    return () => clearInterval(interval);
+  }, [isSearching]);
+
   const handleSubmit = () => {
     if (!onSearch) return;
 
     if (mode === 'discovery') {
        if (industry && city) onSearch('discovery', industry, city);
     } else {
-       if (companyName) onSearch('lookup', companyName, lookupCity || 'Anywhere'); // City optional for lookup
+       if (companyName) onSearch('lookup', companyName, lookupCity || 'Anywhere'); 
     }
   };
 
@@ -145,7 +169,11 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
             `}
           >
             {isSearching && companies.length === 0 ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
-            {isSearching && companies.length === 0 ? (mode === 'discovery' ? 'Scouting...' : 'Looking up...') : (mode === 'discovery' ? 'Find Leads' : 'Search Company')}
+            {isSearching && companies.length === 0 ? (
+                <span className="font-mono text-xs uppercase tracking-wide animate-pulse">{loadingText}</span>
+            ) : (
+                mode === 'discovery' ? 'Find Leads' : 'Search Company'
+            )}
           </button>
         </div>
       </div>
@@ -244,7 +272,9 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
               `}
            >
               {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />}
-              {isSearching ? 'Scouting More...' : 'Load More Leads'}
+              {isSearching ? (
+                  <span className="font-mono text-xs uppercase tracking-wide animate-pulse">{loadingText}</span>
+              ) : 'Load More Leads'}
            </button>
         )}
       </div>
