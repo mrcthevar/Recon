@@ -30,25 +30,26 @@ export const onRequestPost = async (context: any) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
+    
+    // Gemini 2.5 Flash is required for Maps + Search combo
     const model = 'gemini-2.5-flash';
 
     const exclusionList = excludeNames && excludeNames.length > 0 ? excludeNames.join(', ') : "None";
 
     let prompt = '';
     
-    // Enhanced Structure for Evidence-Based Scoring
     const jsonStructure = `
     {
       "leads": [
         {
           "name": "string",
-          "website": "string",
+          "website": "string (Must be the specific company URL, not a directory)",
           "location": "string (City, Country)",
           "description": "string (short summary)",
           "needs": ["string (e.g. 'Hiring Developers', 'Rebranding')"],
           "heroProduct": "string",
-          "phone": "string",
-          "email": "string",
+          "phone": "string (Look for local numbers on Contact pages)",
+          "email": "string (Look for info@, hello@, or specific contact emails)",
           "socials": "string (space separated urls)",
           "hotScore": number (0-100),
           "scoreReasoning": "string (Why is this score high/low?)",
@@ -66,21 +67,33 @@ export const onRequestPost = async (context: any) => {
 
     if (mode === 'lookup') {
         prompt = `
-            Act as a B2B Intelligence Scout. Research "${companyName}" in "${city || 'any location'}".
-            Use Google Maps to verify they exist physically.
-            Look for evidence of activity (job postings, news, blog posts).
+            Act as a highly skilled Open Source Intelligence (OSINT) investigator. 
+            Target: "${companyName}" in "${city || 'any location'}".
+            
+            TASKS:
+            1. Use Google Search to find their OFFICIAL website.
+            2. "Scrape" the website content (mentally) to find their specific email address and phone number (Check headers, footers, and 'Contact Us' pages).
+            3. Use Google Maps to verify they have a physical presence.
+            4. Look for recent news, blog posts, or social media activity to gauge their status.
+
             Return valid JSON only. Structure:
             ${jsonStructure}
         `;
     } else {
         prompt = `
-            Act as a B2B Intelligence Scout. Find 5 ACTIVE companies in the ${industry} space in ${city}.
+            Act as a highly skilled Open Source Intelligence (OSINT) investigator.
+            Mission: Find 5 ACTIVE companies in the ${industry} space in ${city}.
             Exclude: ${exclusionList}.
             
-            CRITICAL: Only return companies where you can find EVIDENCE of activity (active website, recent job posts, or verified map location).
+            EXECUTION STEPS:
+            1. Use Google Search to identify potential candidates.
+            2. For each candidate, verify they are active by looking for recent activity (2024-2025).
+            3. DEEP DIVE for Contact Info: You MUST try to find a real email address and phone number by searching for their "Contact Us" page or Facebook "About" section. Do not return "N/A" unless absolutely impossible to find.
+            4. Use Google Maps to verify their location.
             
-            For 'signals', extract specific facts that would help a salesperson pitch them.
-            For 'hotScore', calculate based on: Website Quality + Verified Location + Recent Evidence.
+            SCORING:
+            - High Score (80+): Has Website + Email + Verified Map Location + Recent News.
+            - Low Score: Missing contact info or inactive website.
             
             Return valid JSON only. Structure:
             ${jsonStructure}
@@ -91,17 +104,21 @@ export const onRequestPost = async (context: any) => {
       model,
       contents: prompt,
       config: {
-        tools: [{ googleMaps: {} }],
+        // We use BOTH Search (for scraping info) and Maps (for location verification)
+        tools: [
+            { googleSearch: {} },
+            { googleMaps: {} }
+        ],
         temperature: 0.5,
       },
     });
 
     let text = response.text || "{}";
+    
+    // Robust JSON extraction
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
     const firstBrace = text.indexOf('{');
     const lastBrace = text.lastIndexOf('}');
-    
     if (firstBrace !== -1 && lastBrace !== -1) {
         text = text.substring(firstBrace, lastBrace + 1);
     }
@@ -117,12 +134,12 @@ export const onRequestPost = async (context: any) => {
         });
     }
 
-    // Post-process
+    // Post-process to ensure fields exist
     const leads = (data.leads || []).map((lead: any, index: number) => ({
         ...lead,
         id: `gen-${Date.now()}-${index}`,
         status: 'New',
-        recentWork: lead.description, // Fallback
+        recentWork: lead.description, 
         website: lead.website || "N/A",
         phone: lead.phone || "N/A",
         email: lead.email || "N/A",
