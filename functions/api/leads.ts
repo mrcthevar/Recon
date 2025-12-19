@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 interface Env {
   API_KEY: string;
@@ -29,34 +29,48 @@ export const onRequestPost = async (context: any) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    // Using gemini-2.5-flash for reliable Google Maps + JSON Schema support
+    // Using gemini-2.5-flash as it is the standard for Maps Grounding
     const model = 'gemini-2.5-flash';
 
     const exclusionList = excludeNames && excludeNames.length > 0 ? excludeNames.join(', ') : "None";
 
     let prompt = '';
     
+    // Simplified structure request for robustness
+    const jsonStructure = `
+    {
+      "leads": [
+        {
+          "name": "string",
+          "website": "string",
+          "description": "string",
+          "needs": ["string"],
+          "heroProduct": "string",
+          "phone": "string",
+          "email": "string",
+          "socials": "string",
+          "hotScore": number,
+          "scoreReasoning": "string",
+          "signals": [{ "type": "string", "text": "string" }]
+        }
+      ]
+    }
+    `;
+
     if (mode === 'lookup') {
         prompt = `
-            Perform detailed reconnaissance on the company "${companyName}" located in or near "${city}".
-            Use Google Maps to find their real-world existence, location, and details.
-            
-            Return a SINGLE company object in the specified JSON schema.
+            Research the company "${companyName}" in "${city}".
+            Use Google Maps to verify details.
+            Return valid JSON only. Structure:
+            ${jsonStructure}
         `;
     } else {
         prompt = `
-            Scout for 10 high-potential, active ${industry} companies or agencies in ${city}.
-            
-            CRITICAL EXCLUSION LIST: Do NOT include these companies: ${exclusionList}.
-            
-            For each company found via Google Maps:
-            1. Analyze their digital presence and activity.
-            2. Calculate a "Hot Score" (0-100) based on this formula:
-               (Hiring Signals * 30) + (Recent Funding * 25) + (Modern Website/Branding * 20) + (Team Growth * 15) + (Industry Fit * 10).
-               Estimate these values based on available data.
-            3. Extract "Tactical Signals" (e.g. "Hiring: Senior Designer", "News: Series A Funding", "Tech: Using Shopify").
-            
-            Return the results in the specified JSON schema.
+            Find 5 active ${industry} companies in ${city}.
+            Exclude: ${exclusionList}.
+            Use Google Maps to verify.
+            Return valid JSON only. Structure:
+            ${jsonStructure}
         `;
     }
 
@@ -66,54 +80,35 @@ export const onRequestPost = async (context: any) => {
       config: {
         tools: [{ googleMaps: {} }],
         temperature: 0.5,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            leads: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  website: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  needs: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  heroProduct: { type: Type.STRING },
-                  phone: { type: Type.STRING },
-                  email: { type: Type.STRING },
-                  socials: { type: Type.STRING },
-                  hotScore: { type: Type.INTEGER },
-                  scoreReasoning: { type: Type.STRING },
-                  signals: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        type: { type: Type.STRING },
-                        text: { type: Type.STRING }
-                      }
-                    }
-                  }
-                },
-                required: ["name", "hotScore", "signals"]
-              }
-            }
-          }
-        }
+        // Removed responseMimeType entirely to avoid 'application/json' conflict with Maps tool
       },
     });
 
-    const text = response.text || "{}";
+    let text = response.text || "{}";
+    
+    // Aggressive cleanup for markdown
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    // Find the first { and last } to extract JSON
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        text = text.substring(firstBrace, lastBrace + 1);
+    }
+
     let data;
     try {
         data = JSON.parse(text);
     } catch (e) {
-        console.error("JSON Parse Error", text);
-        throw new Error("Failed to parse intelligence data.");
+        console.error("JSON Parse Error on text:", text);
+        return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { 
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+        });
     }
 
-    // Post-process to ensure IDs and defaults
+    // Post-process
     const leads = (data.leads || []).map((lead: any, index: number) => ({
         ...lead,
         id: `gen-${Date.now()}-${index}`,
@@ -123,7 +118,6 @@ export const onRequestPost = async (context: any) => {
         phone: lead.phone || "N/A",
         email: lead.email || "N/A",
         socials: lead.socials || "N/A",
-        // Flatten signals if the model returns them nested or weirdly, though schema helps
         signals: lead.signals || []
     }));
 
@@ -134,6 +128,7 @@ export const onRequestPost = async (context: any) => {
 
   } catch (error: any) {
     console.error("Leads API Critical Error:", error);
+    // Return the raw error message to help debugging
     return new Response(JSON.stringify({ error: error.message || "Unknown Server Error" }), { 
         status: 500,
         headers: { "Content-Type": "application/json" }
