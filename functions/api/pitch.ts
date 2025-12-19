@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 interface Env {
@@ -20,29 +21,39 @@ export const onRequestPost = async (context: any) => {
       });
     }
 
-    const { companyName, industry, userSkills, tone } = await request.json();
+    const { companyName, industry, userSkills, tone, companySignals } = await request.json();
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    // Using Gemini 3 Flash for superior creative writing
     const model = 'gemini-3-flash-preview';
 
+    // Construct a context-rich prompt
+    let contextStr = "";
+    if (companySignals && companySignals.length > 0) {
+        contextStr = `\nUse these specific FACTS about the company to personalize the emails:\n${companySignals.join('\n')}\n`;
+    }
+
     const prompt = `
-      Create 3 distinct cold email pitches for:
-      Target: ${companyName} (${industry})
+      You are an elite B2B sales copywriter.
+      Target Company: ${companyName} (${industry})
       My Offer/Skills: ${userSkills}
       Tone: ${tone}
+      ${contextStr}
 
-      Generate 3 variations:
-      1. "Direct Value": Short, punchy, focuses on ROI/Result.
-      2. "The Observer": Compliments specific aspect of their industry/work, then pivots to offer.
-      3. "The Problem Solver": Asks a question about a common pain point in ${industry}, offers solution.
+      Generate 3 distinct cold email pitches. 
+      Rules:
+      1. If company facts are provided, YOU MUST REFERENCE THEM (e.g., "Saw you are hiring for X", "Congrats on the Y news").
+      2. Keep it under 100 words.
+      3. No fluff.
+
+      Variations:
+      1. "Evidence-Based": Lead with the observed signal/fact, then pivot to solution.
+      2. "The Specialist": Focus on how my skills solve a specific problem in ${industry}.
+      3. "Low Friction": A very short, casual "worth a chat?" approach.
 
       Format as a JSON object with a key "pitches" containing an array of objects.
-      Each object must have: "angle" (e.g. Direct Value), "subject", "body".
-      Keep bodies under 120 words.
+      Each object must have: "angle", "subject", "body".
     `;
 
-    // Create the generation promise
     const generationPromise = ai.models.generateContent({
       model: model,
       contents: { parts: [{ text: prompt }] },
@@ -70,16 +81,31 @@ export const onRequestPost = async (context: any) => {
       },
     });
 
-    // Create a timeout promise (25 seconds)
     const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error("Generation timed out. Please try again.")), 25000)
     );
 
-    // Race them
     const response: any = await Promise.race([generationPromise, timeoutPromise]);
 
-    const text = response.text || "{}";
-    const data = JSON.parse(text);
+    let text = response.text || "{}";
+    
+    // Robust cleanup for markdown code blocks (just in case)
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    // Ensure we are parsing from the first curly brace
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        text = text.substring(firstBrace, lastBrace + 1);
+    }
+
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+         console.error("JSON Parse Error on Pitch:", text);
+         throw new Error("Failed to parse pitch response.");
+    }
 
     return new Response(JSON.stringify(data), {
       status: 200,
@@ -89,7 +115,7 @@ export const onRequestPost = async (context: any) => {
   } catch (error: any) {
     console.error("Backend Pitch Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, // Or 504 for timeout, but 500 is generic enough here
+      status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }

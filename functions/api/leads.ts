@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 interface Env {
@@ -29,29 +30,35 @@ export const onRequestPost = async (context: any) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    // Using gemini-2.5-flash as it is the standard for Maps Grounding
     const model = 'gemini-2.5-flash';
 
     const exclusionList = excludeNames && excludeNames.length > 0 ? excludeNames.join(', ') : "None";
 
     let prompt = '';
     
-    // Simplified structure request for robustness
+    // Enhanced Structure for Evidence-Based Scoring
     const jsonStructure = `
     {
       "leads": [
         {
           "name": "string",
           "website": "string",
-          "description": "string",
-          "needs": ["string"],
+          "location": "string (City, Country)",
+          "description": "string (short summary)",
+          "needs": ["string (e.g. 'Hiring Developers', 'Rebranding')"],
           "heroProduct": "string",
           "phone": "string",
           "email": "string",
-          "socials": "string",
-          "hotScore": number,
-          "scoreReasoning": "string",
-          "signals": [{ "type": "string", "text": "string" }]
+          "socials": "string (space separated urls)",
+          "hotScore": number (0-100),
+          "scoreReasoning": "string (Why is this score high/low?)",
+          "signals": [
+            { 
+               "type": "string (e.g. 'Hiring', 'Growth', 'Tech Stack', 'News', 'Verified Location')", 
+               "text": "string (Specific evidence, e.g. '3 Open Job Roles for React')",
+               "confidence": "High" | "Medium" | "Low"
+            }
+          ]
         }
       ]
     }
@@ -59,16 +66,22 @@ export const onRequestPost = async (context: any) => {
 
     if (mode === 'lookup') {
         prompt = `
-            Research the company "${companyName}" in "${city}".
-            Use Google Maps to verify details.
+            Act as a B2B Intelligence Scout. Research "${companyName}" in "${city || 'any location'}".
+            Use Google Maps to verify they exist physically.
+            Look for evidence of activity (job postings, news, blog posts).
             Return valid JSON only. Structure:
             ${jsonStructure}
         `;
     } else {
         prompt = `
-            Find 5 active ${industry} companies in ${city}.
+            Act as a B2B Intelligence Scout. Find 5 ACTIVE companies in the ${industry} space in ${city}.
             Exclude: ${exclusionList}.
-            Use Google Maps to verify.
+            
+            CRITICAL: Only return companies where you can find EVIDENCE of activity (active website, recent job posts, or verified map location).
+            
+            For 'signals', extract specific facts that would help a salesperson pitch them.
+            For 'hotScore', calculate based on: Website Quality + Verified Location + Recent Evidence.
+            
             Return valid JSON only. Structure:
             ${jsonStructure}
         `;
@@ -80,16 +93,12 @@ export const onRequestPost = async (context: any) => {
       config: {
         tools: [{ googleMaps: {} }],
         temperature: 0.5,
-        // Removed responseMimeType entirely to avoid 'application/json' conflict with Maps tool
       },
     });
 
     let text = response.text || "{}";
-    
-    // Aggressive cleanup for markdown
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    // Find the first { and last } to extract JSON
     const firstBrace = text.indexOf('{');
     const lastBrace = text.lastIndexOf('}');
     
@@ -113,12 +122,13 @@ export const onRequestPost = async (context: any) => {
         ...lead,
         id: `gen-${Date.now()}-${index}`,
         status: 'New',
-        recentWork: "Identified via live search",
+        recentWork: lead.description, // Fallback
         website: lead.website || "N/A",
         phone: lead.phone || "N/A",
         email: lead.email || "N/A",
         socials: lead.socials || "N/A",
-        signals: lead.signals || []
+        signals: lead.signals || [],
+        location: lead.location || city
     }));
 
     return new Response(JSON.stringify({ leads }), {
@@ -128,7 +138,6 @@ export const onRequestPost = async (context: any) => {
 
   } catch (error: any) {
     console.error("Leads API Critical Error:", error);
-    // Return the raw error message to help debugging
     return new Response(JSON.stringify({ error: error.message || "Unknown Server Error" }), { 
         status: 500,
         headers: { "Content-Type": "application/json" }

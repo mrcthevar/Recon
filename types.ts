@@ -1,6 +1,8 @@
+
 export interface Signal {
   type: string;
   text: string;
+  confidence: 'High' | 'Medium' | 'Low';
 }
 
 export interface Company {
@@ -8,7 +10,7 @@ export interface Company {
   name: string;
   website: string;
   industry: string;
-  status: 'New' | 'Warm' | 'Contacted';
+  status: 'New' | 'Saved' | 'Contacted';
   description: string;
   recentWork: string;
   needs: string[];
@@ -19,6 +21,7 @@ export interface Company {
   hotScore: number;
   scoreReasoning?: string;
   signals: Signal[];
+  location: string;
 }
 
 export interface Pitch {
@@ -27,16 +30,12 @@ export interface Pitch {
   body: string;
 }
 
-export interface ScoutData {
-  company: Company | null;
-  pitches: Pitch[];
-}
-
 export interface PitchParams {
   companyName: string;
   industry: string;
   userSkills: string;
   tone: 'Professional' | 'Casual' | 'Bold';
+  companySignals?: string[]; // New: Pass signals to context
 }
 
 export type SearchMode = 'discovery' | 'lookup';
