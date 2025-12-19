@@ -240,9 +240,9 @@ const App: React.FC = () => {
             {/* Mobile Sidebar Toggle */}
             <div className="lg:hidden p-2 border-b border-neutral-200 dark:border-white/10 flex items-center justify-between bg-neutral-100/50 dark:bg-neutral-900/50">
                <button onClick={() => setShowMobileSidebar(true)} className="flex items-center gap-2 text-xs font-bold uppercase text-neutral-500">
-                  <Menu className="w-4 h-4" /> Open War Room
+                  <Menu className="w-4 h-4" /> Open Saved List
                </button>
-               <span className="text-[10px] text-accent font-mono">{savedCompanies.length} TARGETS</span>
+               <span className="text-[10px] text-accent font-mono">{savedCompanies.length} SAVED</span>
             </div>
 
             {/* Middle: Live Search Results */}

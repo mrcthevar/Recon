@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, toggleTheme }) => {
               Recon
             </h1>
             <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 mt-1 tracking-wide uppercase">
-              Intelligence Suite for Seekers
+              Lead Generation & Outreach
             </span>
           </div>
         </div>

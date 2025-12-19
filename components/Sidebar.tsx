@@ -21,16 +21,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-b border-neutral-200 dark:border-white/5 bg-neutral-100/50 dark:bg-white/5">
         <div className="flex items-center gap-2 text-neutral-900 dark:text-white font-semibold text-sm uppercase tracking-wider">
           <Archive className="w-4 h-4 text-accent" />
-          <span>War Room</span>
+          <span>Saved Leads</span>
         </div>
-        <p className="text-[10px] text-neutral-500 mt-1">SAVED TARGETS: {savedCompanies.length}</p>
+        <p className="text-[10px] text-neutral-500 mt-1">SAVED COMPANIES: {savedCompanies.length}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {savedCompanies.length === 0 ? (
           <div className="h-32 flex flex-col items-center justify-center text-neutral-400 opacity-60">
             <Crosshair className="w-8 h-8 mb-2 stroke-1" />
-            <span className="text-xs">No targets saved</span>
+            <span className="text-xs">No companies saved</span>
           </div>
         ) : (
           savedCompanies.map((company) => (
@@ -55,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemoveCompany(company.id); }}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 text-neutral-400 transition-opacity"
-                  title="Remove Target"
+                  title="Remove Lead"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

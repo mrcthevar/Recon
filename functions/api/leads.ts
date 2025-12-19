@@ -43,14 +43,14 @@ export const onRequestPost = async (context: any) => {
       "leads": [
         {
           "name": "string",
-          "website": "string",
+          "website": "string (Full URL starting with https://)",
           "location": "string",
           "description": "string (Max 15 words)",
           "needs": ["string (Key needs only)"],
           "heroProduct": "string",
-          "phone": "string (MUST TRY TO FIND)",
-          "email": "string (MUST TRY TO FIND)",
-          "socials": "string (Space separated URLs)",
+          "phone": "string (MUST TRY TO FIND - SEARCH HARD)",
+          "email": "string (MUST TRY TO FIND - SEARCH HARD)",
+          "socials": "string (Space separated FULL URLs starting with https:// - REQUIRED)",
           "hotScore": number (0-100),
           "signals": [
             { 
@@ -64,7 +64,20 @@ export const onRequestPost = async (context: any) => {
     }
     `;
 
-    // PROMPT ENGINEERING: Prioritize Contact Data Extraction
+    // SYSTEM INSTRUCTION: Sets the baseline behavior to be aggressive about contacts
+    const systemInstruction = `
+      You are an expert Lead Generation AI agent.
+      
+      CORE DIRECTIVE: You MUST prioritize finding CONTACT INFORMATION (Phone, Email, Social Links) above all else.
+      
+      SEARCH RULES:
+      1. Always search for "[Company] contact phone email".
+      2. Always search for "[Company] facebook instagram linkedin" to find social profiles, as they often contain phone numbers/emails missing from websites.
+      3. If a direct email is missing, look for "info@", "hello@", or "contact@" addresses on their homepage or social media.
+      4. Do not return "N/A" for Phone or Email unless you have verified it does not exist on their Website, Facebook, AND Instagram.
+      5. Ensure all website and social URLs are FULL and VALID (start with https://).
+    `;
+
     if (mode === 'lookup') {
         prompt = `
             DEEP OSINT TASK: Target "${companyName}" in "${city || 'any location'}".
@@ -76,11 +89,6 @@ export const onRequestPost = async (context: any) => {
             2. Search for "${companyName} contact email phone".
             3. Search for "${companyName} LinkedIn" or Facebook to find contact info in profiles.
             
-            EXTRACTION RULES:
-            - Phone: Look for local landlines or mobiles.
-            - Email: Look for generic (info@) or specific emails.
-            - Socials: Return full URLs.
-            
             Return JSON only. Structure:
             ${jsonStructure}
         `;
@@ -89,16 +97,14 @@ export const onRequestPost = async (context: any) => {
             SCOUT MISSION: Find 5 ACTIVE ${industry} companies in ${city}.
             Exclude: ${exclusionList}.
             
-            CRITICAL: You MUST prioritize finding CONTACT INFO (Phone, Email) for every lead.
+            CRITICAL: For every lead found, you must perform a secondary search for their contact info.
             
             PROTOCOL:
-            1. SEARCH: "${industry} companies ${city} contact email phone directory".
+            1. SEARCH: "${industry} companies ${city} directory".
             2. FOR EACH LEAD:
-               - Check the search snippet for phone numbers or emails.
-               - If not in snippet, assume they might be on the Facebook/LinkedIn page found in search.
-            3. DATA EXTRACTION:
-               - If specific email isn't found, look for "info@[domain]" pattern or "hello@[domain]".
-               - If phone isn't found, check for local listing snippets.
+               - Search for "[Lead Name] ${city} phone email social media".
+               - Check the snippets for phone numbers (look for local area codes).
+               - Check the snippets for emails (look for @ symbol).
             
             Return JSON only. Structure:
             ${jsonStructure}
@@ -112,7 +118,8 @@ export const onRequestPost = async (context: any) => {
         tools: [
             { googleSearch: {} } 
         ],
-        temperature: 0.4, // Increased slightly to allow for broader search interpretation
+        temperature: 0.4,
+        systemInstruction: systemInstruction
       },
     });
 

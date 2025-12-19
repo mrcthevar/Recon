@@ -10,10 +10,10 @@ interface IntelligencePaneProps {
   isSaved: boolean;
 }
 
-type Tab = 'brief' | 'signals' | 'comms';
+type Tab = 'overview' | 'insights' | 'outreach';
 
 export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onToggleSave, isSaved }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('brief');
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [skills, setSkills] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPitches, setGeneratedPitches] = useState<Pitch[]>([]);
@@ -25,7 +25,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
     setGeneratedPitches([]);
     setActivePitchIndex(0);
     setIsEditing(false);
-    setActiveTab('brief');
+    setActiveTab('overview');
   }, [company?.id]);
 
   const handleGenerate = async () => {
@@ -68,17 +68,37 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
   };
 
   const getSocialLinks = () => {
-    if (!company || company.socials === 'N/A') return [];
-    const links = company.socials.split(/[\s,]+/).filter(s => s.startsWith('http'));
-    return links.map((link, index) => {
+    if (!company || !company.socials || company.socials === 'N/A' || company.socials === 'None') return [];
+    
+    // Split by spaces, commas, or newlines to handle various AI outputs
+    return company.socials
+      .split(/[\s,\n]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0 && !s.toLowerCase().includes('n/a'))
+      .map((rawLink, index) => {
+        // Clean potential markdown or brackets formatting
+        let url = rawLink.replace(/[\[\]()]/g, '');
+        
+        // Ensure protocol exists
+        if (!url.startsWith('http')) {
+            url = `https://${url}`;
+        }
+        
+        // Basic validation: must include a dot and have minimal length to be a URL
+        if (!url.includes('.') || url.length < 8) return null;
+
         let icon = <LinkIcon className="w-4 h-4" />;
-        if (link.includes('linkedin')) icon = <Linkedin className="w-4 h-4" />;
-        else if (link.includes('twitter') || link.includes('x.com')) icon = <Twitter className="w-4 h-4" />;
-        else if (link.includes('facebook')) icon = <Facebook className="w-4 h-4" />;
-        else if (link.includes('instagram')) icon = <Instagram className="w-4 h-4" />;
-        else if (link.includes('youtube')) icon = <Youtube className="w-4 h-4" />;
-        return { url: link, icon, key: index };
-    });
+        const lowerUrl = url.toLowerCase();
+        
+        if (lowerUrl.includes('linkedin')) icon = <Linkedin className="w-4 h-4" />;
+        else if (lowerUrl.includes('twitter') || lowerUrl.includes('x.com')) icon = <Twitter className="w-4 h-4" />;
+        else if (lowerUrl.includes('facebook')) icon = <Facebook className="w-4 h-4" />;
+        else if (lowerUrl.includes('instagram')) icon = <Instagram className="w-4 h-4" />;
+        else if (lowerUrl.includes('youtube')) icon = <Youtube className="w-4 h-4" />;
+        
+        return { url, icon, key: index };
+      })
+      .filter((link): link is { url: string; icon: React.ReactElement; key: number } => link !== null);
   };
 
   if (!company) {
@@ -87,8 +107,8 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
         <div className="w-20 h-20 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-6 ring-1 ring-neutral-200 dark:ring-white/5">
           <Target className="w-8 h-8 opacity-20" />
         </div>
-        <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-2">Target Selection Required</h3>
-        <p className="text-sm max-w-xs text-center leading-relaxed opacity-60">Select a lead from the field list or your war room to view intelligence dossier.</p>
+        <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-2">Company Selection Required</h3>
+        <p className="text-sm max-w-xs text-center leading-relaxed opacity-60">Select a lead from the list or your saved items to view company details.</p>
       </div>
     );
   }
@@ -99,7 +119,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
   return (
     <div className="h-full flex flex-col bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-white/10 shadow-glass overflow-hidden">
       
-      {/* Dossier Header */}
+      {/* Header */}
       <div className="p-6 border-b border-neutral-200 dark:border-white/5 bg-neutral-50/50 dark:bg-black/20">
          <div className="flex justify-between items-start mb-4">
              <div>
@@ -116,7 +136,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
              <button 
                 onClick={onToggleSave}
                 className={`p-2 rounded-lg border transition-all ${isSaved ? 'bg-accent/10 border-accent text-accent' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-white/10 text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}
-                title={isSaved ? "Remove from War Room" : "Save to War Room"}
+                title={isSaved ? "Remove from List" : "Save to List"}
              >
                  <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-accent' : ''}`} />
              </button>
@@ -135,7 +155,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                      </a>
                  ))}
                  {company.website !== 'N/A' && (
-                     <a href={company.website} target="_blank" rel="noreferrer" className="p-1.5 rounded-md hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-colors">
+                     <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noreferrer" className="p-1.5 rounded-md hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-colors">
                         <Globe className="w-4 h-4" />
                      </a>
                  )}
@@ -145,16 +165,16 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
 
       {/* Navigation Tabs */}
       <div className="flex border-b border-neutral-200 dark:border-white/5">
-          <button onClick={() => setActiveTab('brief')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'brief' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Briefing</button>
-          <button onClick={() => setActiveTab('signals')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'signals' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Evidence</button>
-          <button onClick={() => setActiveTab('comms')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'comms' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Comms</button>
+          <button onClick={() => setActiveTab('overview')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'overview' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Overview</button>
+          <button onClick={() => setActiveTab('insights')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'insights' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Insights</button>
+          <button onClick={() => setActiveTab('outreach')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'outreach' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Outreach</button>
       </div>
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-neutral-50/30 dark:bg-neutral-900/30">
         
-        {/* TAB: BRIEFING */}
-        {activeTab === 'brief' && (
+        {/* TAB: OVERVIEW */}
+        {activeTab === 'overview' && (
             <div className="space-y-6 animate-fade-in">
                 <div className="bg-white dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-200 dark:border-white/5">
                     <h3 className="text-xs font-bold text-neutral-500 uppercase mb-3">Company Overview</h3>
@@ -188,12 +208,12 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
             </div>
         )}
 
-        {/* TAB: SIGNALS (EVIDENCE) */}
-        {activeTab === 'signals' && (
+        {/* TAB: INSIGHTS (EVIDENCE) */}
+        {activeTab === 'insights' && (
              <div className="space-y-4 animate-fade-in">
                 {company.signals.length === 0 ? (
                     <div className="text-center py-10 text-neutral-500">
-                        <p className="text-sm">No specific evidence signals detected.</p>
+                        <p className="text-sm">No specific insights detected.</p>
                     </div>
                 ) : (
                     company.signals.map((signal, idx) => (
@@ -214,17 +234,17 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                     ))
                 )}
                  <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-500/20 text-xs text-amber-800 dark:text-amber-500 leading-relaxed">
-                    <strong className="block mb-1">Scout Assessment:</strong>
+                    <strong className="block mb-1">AI Analysis:</strong>
                     {company.scoreReasoning || "Automated assessment based on visible digital footprint and relevance."}
                  </div>
              </div>
         )}
 
-        {/* TAB: COMMS (PITCHER) */}
-        {activeTab === 'comms' && (
+        {/* TAB: OUTREACH (COMMS) */}
+        {activeTab === 'outreach' && (
             <div className="h-full flex flex-col animate-fade-in">
                 <div className="mb-4">
-                    <label className="text-xs font-bold text-neutral-500 uppercase mb-2 block">Your Offer / Capability</label>
+                    <label className="text-xs font-bold text-neutral-500 uppercase mb-2 block">Your Offer / Skills</label>
                     <div className="flex gap-2">
                         <input 
                             type="text" 
@@ -296,7 +316,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                 ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-neutral-400 opacity-50 border-2 border-dashed border-neutral-200 dark:border-white/5 rounded-xl">
                         <Bot className="w-6 h-6 mb-2" />
-                        <span className="text-xs">Enter skills to generate tactical comms</span>
+                        <span className="text-xs">Enter skills to generate email drafts</span>
                      </div>
                 )}
             </div>

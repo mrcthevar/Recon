@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Terminal, Copy, Check } from 'lucide-react';
@@ -24,8 +25,8 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ state, result, error
     return (
       <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-neutral-500 border border-neutral-700/30 rounded-lg bg-neutral-900/30 p-8">
         <Terminal className="w-12 h-12 mb-4 opacity-50" />
-        <p className="font-mono text-sm text-center">AWAITING INTEL...</p>
-        <p className="text-xs text-center mt-2 opacity-50 max-w-xs">Upload an image to begin tactical analysis sequence.</p>
+        <p className="font-mono text-sm text-center">READY FOR ANALYSIS</p>
+        <p className="text-xs text-center mt-2 opacity-50 max-w-xs">Upload an image to begin analysis.</p>
       </div>
     );
   }
@@ -39,16 +40,16 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ state, result, error
                 <div className="w-16 h-16 border-4 border-accent rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
             </div>
             <div className="font-mono text-accent text-sm animate-pulse">
-                PROCESSING INTEL...
+                PROCESSING IMAGE...
             </div>
             <div className="font-mono text-xs text-neutral-500">
-                ESTABLISHING NEURAL UPLINK
+                ANALYZING CONTENT
             </div>
         </div>
         
         {/* Background text scrolling effect */}
         <div className="absolute inset-0 opacity-10 font-mono text-[10px] leading-3 overflow-hidden text-accent select-none pointer-events-none p-2 break-all">
-            {Array(100).fill("010101101 ANALYZING SEGMENT 0xFF... ").join(" ")}
+            {Array(100).fill("010101101 ANALYZING... ").join(" ")}
         </div>
       </div>
     );
@@ -58,7 +59,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ state, result, error
     return (
       <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-red-500 border border-red-900/50 rounded-lg bg-red-900/10 p-8">
         <div className="text-4xl mb-4">⚠️</div>
-        <h3 className="font-mono font-bold text-lg mb-2">SYSTEM FAILURE</h3>
+        <h3 className="font-mono font-bold text-lg mb-2">SYSTEM ERROR</h3>
         <p className="text-sm font-mono text-center opacity-80">{error || "Unknown Error"}</p>
       </div>
     );
@@ -69,7 +70,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ state, result, error
       <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-700 bg-neutral-800/20">
         <div className="flex items-center space-x-2">
             <div className="w-2 h-2 rounded-full bg-accent"></div>
-            <span className="text-xs font-mono font-bold text-neutral-200 tracking-wider">ANALYSIS REPORT</span>
+            <span className="text-xs font-mono font-bold text-neutral-200 tracking-wider">ANALYSIS RESULTS</span>
         </div>
         <div className="flex items-center space-x-3">
              <span className="text-[10px] font-mono text-neutral-500">{result?.timestamp}</span>
@@ -102,7 +103,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ state, result, error
       
       <div className="px-4 py-2 border-t border-neutral-700 bg-black text-[10px] text-neutral-500 font-mono flex justify-between">
          <span>CONFIDENCE: HIGH</span>
-         <span>SECURE CONNECTION</span>
+         <span>VERIFIED</span>
       </div>
     </div>
   );

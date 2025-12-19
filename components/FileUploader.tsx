@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { ACCEPTED_IMAGE_TYPES } from '../constants';
@@ -19,7 +20,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
     
     // Check type roughly
     if (!file.type.startsWith('image/')) {
-        alert("System currently optimized for Image Reconnaissance.");
+        alert("System currently optimized for Image Analysis.");
     }
 
     const reader = new FileReader();
@@ -85,7 +86,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
           </div>
           
           <h3 className="text-lg font-mono font-medium text-neutral-300 mb-1">
-            Drop Intelligence Here
+            Drop Image Here
           </h3>
           <p className="text-xs text-neutral-500 font-mono">
             SUPPORTED: PNG, JPG, WEBP
@@ -120,7 +121,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, select
              </div>
           </div>
           
-          {/* Overlay grid for "tactical" look */}
+          {/* Overlay grid */}
           <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(20,184,166,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.05)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
         </div>
       )}

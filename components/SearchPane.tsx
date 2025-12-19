@@ -31,17 +31,17 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   const [lookupCity, setLookupCity] = useState('');
 
   // Loading Message State
-  const [loadingText, setLoadingText] = useState('Scouting...');
+  const [loadingText, setLoadingText] = useState('Searching...');
   
   useEffect(() => {
     if (!isSearching) return;
     
     const messages = [
-        "Triangulating Sector...",
-        "Identifying Targets...",
-        "Scraping Comms...",
-        "Verifying Signals...",
-        "Compiling Dossier..."
+        "Analyzing Industry...",
+        "Finding Companies...",
+        "Finding Contact Info...",
+        "Verifying Details...",
+        "Preparing Report..."
     ];
     
     let i = 0;
@@ -84,7 +84,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     onClick={() => setMode('discovery')}
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${mode === 'discovery' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                  >
-                    Scout
+                    Discover
                  </button>
                  <button
                     onClick={() => setMode('lookup')}
@@ -189,10 +189,10 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                  <Radar className="w-8 h-8 text-neutral-400" />
              </div>
              <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
-               Awaiting Mission
+               Ready to Search
              </h3>
              <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
-               {mode === 'discovery' ? "Enter an Industry and City above to scout for live leads." : "Enter a Company Name to find contact details."}
+               {mode === 'discovery' ? "Enter an Industry and City above to find leads." : "Enter a Company Name to find contact details."}
              </p>
           </div>
         )}
@@ -252,8 +252,8 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                   mt-3 flex items-center text-xs font-medium text-accent overflow-hidden transition-all duration-300 ease-out
                   ${isSelected ? 'max-h-6 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-2'}
               `}>
-                  <span>Active Lead</span>
-                  <ChevronRight className="w-3 h-3 ml-1 animate-pulse" />
+                  <span>Selected</span>
+                  <ChevronRight className="w-3 h-3 ml-1" />
               </div>
             </div>
           );
