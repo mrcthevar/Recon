@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface Env {
   API_KEY: string;
@@ -29,52 +29,34 @@ export const onRequestPost = async (context: any) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    // Keep 2.5 Flash for Google Maps support
+    // Using gemini-2.5-flash for reliable Google Maps + JSON Schema support
     const model = 'gemini-2.5-flash';
+
+    const exclusionList = excludeNames && excludeNames.length > 0 ? excludeNames.join(', ') : "None";
 
     let prompt = '';
     
-    // Strict example line to guide the model
-    const exampleLine = "Example Co | https://example.com | A leading digital agency | Web Dev | Custom Apps | 555-0123 | info@example.com | https://twitter.com/ex | 85 | Hiring:Devs;Growth:New Office";
-
     if (mode === 'lookup') {
         prompt = `
-            Task: detailed research on company "${companyName}" in "${city}".
-            Use Google Maps to verify they exist.
+            Perform detailed reconnaissance on the company "${companyName}" located in or near "${city}".
+            Use Google Maps to find their real-world existence, location, and details.
             
-            Output: A SINGLE LINE of pipe-separated details.
-            Format: Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs | Hot Score (0-100) | Signals
-            
-            Example output format:
-            ${exampleLine}
-
-            Rules:
-            1. Hot Score: 0-100 based on digital presence/activity.
-            2. Signals: 1-3 signals (e.g. Funding:Series A; Hiring:Designers). Separated by semicolons (;).
-            3. Use "N/A" for missing text.
-            4. Return ONLY the data line. No intro, no markdown.
+            Return a SINGLE company object in the specified JSON schema.
         `;
     } else {
-        const exclusionText = excludeNames && excludeNames.length > 0 
-          ? `Exclude: ${excludeNames.join(', ')}.` 
-          : '';
-
         prompt = `
-          Task: List 10 active ${industry} companies in ${city}.
-          ${exclusionText}
-          
-          Output: 10 lines of pipe-separated details.
-          Format: Name | Website URL | Brief Description | Potential Service Need | Hero Product/Service | Phone Number | Email Address | Social Media URLs | Hot Score (0-100) | Signals
-          
-          Example output format:
-          ${exampleLine}
-
-          Rules:
-          1. Hot Score: 0-100. 80+ is high-end/distinct.
-          2. Signals: e.g. Hiring:Creative Director; Tech:Shopify; Growth:New Office. Format: "Type:Desc;Type:Desc".
-          3. If Email/Phone missing, write "N/A".
-          4. Social Media: Space separated URLs.
-          5. STRICTLY NO MARKDOWN, NO TABLE HEADERS, JUST RAW DATA LINES.
+            Scout for 10 high-potential, active ${industry} companies or agencies in ${city}.
+            
+            CRITICAL EXCLUSION LIST: Do NOT include these companies: ${exclusionList}.
+            
+            For each company found via Google Maps:
+            1. Analyze their digital presence and activity.
+            2. Calculate a "Hot Score" (0-100) based on this formula:
+               (Hiring Signals * 30) + (Recent Funding * 25) + (Modern Website/Branding * 20) + (Team Growth * 15) + (Industry Fit * 10).
+               Estimate these values based on available data.
+            3. Extract "Tactical Signals" (e.g. "Hiring: Senior Designer", "News: Series A Funding", "Tech: Using Shopify").
+            
+            Return the results in the specified JSON schema.
         `;
     }
 
@@ -83,70 +65,67 @@ export const onRequestPost = async (context: any) => {
       contents: prompt,
       config: {
         tools: [{ googleMaps: {} }],
-        temperature: 0.6,
-        systemInstruction: "You are a data extractor API. You output raw text data in pipe-separated format only. Do not converse."
+        temperature: 0.5,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            leads: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING },
+                  website: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  needs: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  heroProduct: { type: Type.STRING },
+                  phone: { type: Type.STRING },
+                  email: { type: Type.STRING },
+                  socials: { type: Type.STRING },
+                  hotScore: { type: Type.INTEGER },
+                  scoreReasoning: { type: Type.STRING },
+                  signals: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        type: { type: Type.STRING },
+                        text: { type: Type.STRING }
+                      }
+                    }
+                  }
+                },
+                required: ["name", "hotScore", "signals"]
+              }
+            }
+          }
+        }
       },
     });
 
-    const text = response.text || "";
-    
-    const leads = text
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 5 && line.includes('|') && !line.toLowerCase().includes('name | website')) 
-      .map((line, index) => {
-        // Remove markdown table borders if present
-        const cleanLine = line.replace(/^\|/, '').replace(/\|$/, '');
-        const parts = cleanLine.split('|').map(s => s.trim());
-        
-        const name = parts[0] || "Unknown Company";
-        let website = parts[1] || "N/A";
-        const description = parts[2] || "No description available";
-        const need = parts[3] || "General Creative Services";
-        const heroProduct = parts[4] || "Services";
-        const phone = parts[5] || "N/A";
-        const email = parts[6] || "N/A";
-        const socials = parts[7] || "N/A";
-        
-        // Safety check for Hot Score to ensure it is a number
-        let hotScore = 50;
-        if (parts[8]) {
-            const scoreMatch = parts[8].match(/(\d{1,3})/);
-            if (scoreMatch) hotScore = parseInt(scoreMatch[0]);
-        }
-        
-        const signalsRaw = parts[9] || "Growth:Active Business";
+    const text = response.text || "{}";
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        console.error("JSON Parse Error", text);
+        throw new Error("Failed to parse intelligence data.");
+    }
 
-        // Parse Signals
-        const signals = signalsRaw.split(';').map(s => {
-            const [type, text] = s.split(':').map(x => x.trim());
-            return { type: type || 'Info', text: text || type || 'General Info' };
-        }).filter(s => s.text);
-
-        website = website.replace(/\[.*?\]\(.*?\)/g, (match) => {
-            const url = match.match(/\((.*?)\)/)?.[1];
-            return url || "N/A";
-        }).replace(/\.$/, '');
-
-        const leadIndustry = mode === 'lookup' ? (industry || "General") : industry;
-
-        return {
-          id: `gen-${Date.now()}-${index}`,
-          name: name,
-          website: website,
-          industry: leadIndustry,
-          status: 'New',
-          description: description,
-          recentWork: "Identified via live search",
-          needs: [need],
-          heroProduct: heroProduct,
-          phone: phone,
-          email: email,
-          socials: socials,
-          hotScore: hotScore,
-          signals: signals
-        };
-      });
+    // Post-process to ensure IDs and defaults
+    const leads = (data.leads || []).map((lead: any, index: number) => ({
+        ...lead,
+        id: `gen-${Date.now()}-${index}`,
+        status: 'New',
+        recentWork: "Identified via live search",
+        website: lead.website || "N/A",
+        phone: lead.phone || "N/A",
+        email: lead.email || "N/A",
+        socials: lead.socials || "N/A",
+        // Flatten signals if the model returns them nested or weirdly, though schema helps
+        signals: lead.signals || []
+    }));
 
     return new Response(JSON.stringify({ leads }), {
       status: 200,

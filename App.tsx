@@ -26,21 +26,12 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Scroll to new items when companies array grows
+  // Scroll logic for new items
   useEffect(() => {
     if (companies.length > previousCompanyCountRef.current && previousCompanyCountRef.current > 0) {
-        // We added new items. Try to scroll the first new item into view.
-        // We use a small timeout to allow DOM to render
         setTimeout(() => {
             const container = document.getElementById('results-container');
             if (container) {
-                // Option 1: Scroll to the bottom gently
-                // container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-                
-                // Option 2: Scroll to maintain the user's focus on the flow. 
-                // Actually, standard behavior is usually just append.
-                // If the user feels "output is up", maybe they are confused by the loading state.
-                // Let's ensure we are scrolled to the bottom where the "Load More" button was.
                  container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
             }
         }, 100);
@@ -120,7 +111,7 @@ const App: React.FC = () => {
   return (
     <div 
       onMouseMove={handleMouseMove}
-      className="min-h-screen bg-neutral-50 dark:bg-neutral-950 transition-colors duration-400 selection:bg-accent selection:text-white overflow-hidden flex flex-col relative"
+      className="h-screen bg-neutral-50 dark:bg-neutral-950 transition-colors duration-400 selection:bg-accent selection:text-white overflow-hidden flex flex-col relative"
     >
       
       {/* Background Ambience & Spotlight */}
@@ -139,11 +130,11 @@ const App: React.FC = () => {
       <div className="relative z-10 flex flex-col h-full">
         <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
 
-        <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 h-[calc(100vh-64px)] overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+        <main className="flex-1 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
             
             {/* Left: Search & Leads */}
-            <div className="lg:col-span-4 h-full overflow-hidden flex flex-col">
+            <div className="lg:col-span-4 h-full flex flex-col min-h-0">
               <SearchPane 
                   companies={companies} 
                   selectedCompanyId={selectedCompanyId}
@@ -155,7 +146,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Right: Intelligence */}
-            <div className="hidden lg:block lg:col-span-8 h-full overflow-hidden">
+            <div className="hidden lg:block lg:col-span-8 h-full min-h-0">
               <IntelligencePane company={selectedCompany} />
             </div>
 

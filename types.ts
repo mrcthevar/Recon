@@ -17,6 +17,7 @@ export interface Company {
   email: string;
   socials: string;
   hotScore: number;
+  scoreReasoning?: string;
   signals: Signal[];
 }
 

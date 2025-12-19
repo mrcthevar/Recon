@@ -23,7 +23,7 @@ export const onRequestPost = async (context: any) => {
     const { companyName, industry, userSkills, tone } = await request.json();
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    // Using Gemini 3 Flash for superior creative writing and instruction following
+    // Using Gemini 3 Flash for superior creative writing
     const model = 'gemini-3-flash-preview';
 
     const prompt = `
@@ -42,7 +42,8 @@ export const onRequestPost = async (context: any) => {
       Keep bodies under 120 words.
     `;
 
-    const response = await ai.models.generateContent({
+    // Create the generation promise
+    const generationPromise = ai.models.generateContent({
       model: model,
       contents: { parts: [{ text: prompt }] },
       config: {
@@ -69,6 +70,14 @@ export const onRequestPost = async (context: any) => {
       },
     });
 
+    // Create a timeout promise (25 seconds)
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Generation timed out. Please try again.")), 25000)
+    );
+
+    // Race them
+    const response: any = await Promise.race([generationPromise, timeoutPromise]);
+
     const text = response.text || "{}";
     const data = JSON.parse(text);
 
@@ -80,7 +89,7 @@ export const onRequestPost = async (context: any) => {
   } catch (error: any) {
     console.error("Backend Pitch Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+      status: 500, // Or 504 for timeout, but 500 is generic enough here
       headers: { "Content-Type": "application/json" },
     });
   }
