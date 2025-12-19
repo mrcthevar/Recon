@@ -258,8 +258,8 @@ const App: React.FC = () => {
         contextCompany={selectedCompany} 
       />
 
-      {/* Floating Action Button for Voice */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end space-y-4 pointer-events-none">
+      {/* Floating Action Button for Voice - High Z-Index to Ensure Visibility */}
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end space-y-4 pointer-events-none">
          {/* Toast Area */}
          <div className="flex flex-col gap-2 pointer-events-auto items-end">
             {toasts.map(toast => (

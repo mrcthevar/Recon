@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, X, Activity, Volume2 } from 'lucide-react';
+import { Mic, X, Activity, Volume2, Globe, Wifi } from 'lucide-react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { Company } from '../types';
 
@@ -105,13 +105,15 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
 
         const config = {
           responseModalities: [Modality.AUDIO],
+          tools: [{ googleSearch: {} }], // Enable Search for real-time intelligence
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
           },
           systemInstruction: `You are Recon's Voice Assistant. Keep responses concise, punchy, and professional. 
           You help the user analyze companies and strategize sales pitches.
           If the user is looking at a specific company, focus on that.
-          Do not be verbose. Be helpful and direct.`,
+          Do not be verbose. Be helpful and direct.
+          Use Google Search to answer questions about recent news or company details.`,
         };
 
         sessionPromiseRef.current = ai.live.connect({
@@ -137,7 +139,8 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
               
               const inputCtx = inputContextRef.current;
               sourceNodeRef.current = inputCtx.createMediaStreamSource(mediaStreamRef.current);
-              processorRef.current = inputCtx.createScriptProcessor(4096, 1, 1);
+              // Reduced buffer size to 2048 for lower latency (approx 128ms)
+              processorRef.current = inputCtx.createScriptProcessor(2048, 1, 1);
               
               processorRef.current.onaudioprocess = (e) => {
                 if (!mounted) return;
@@ -284,6 +287,14 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
                 <X className="w-5 h-5" />
             </button>
 
+            {/* Connection Status Indicator */}
+            <div className="absolute top-5 left-6 flex items-center gap-2">
+                 <div className={`w-2 h-2 rounded-full ${status === 'error' ? 'bg-red-500' : (status === 'connecting' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')}`}></div>
+                 <span className="text-[10px] font-mono text-neutral-500 uppercase">
+                    {status === 'connecting' ? 'SYNCING' : 'LIVE'}
+                 </span>
+            </div>
+
             {/* Visualizer Orb */}
             <div className="relative w-40 h-40 mb-8 flex items-center justify-center">
                 {/* Background Rotating Ring 1 */}
@@ -323,12 +334,12 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
                 {status === 'connecting' && "Connecting..."}
                 {status === 'listening' && "Listening"}
                 {status === 'speaking' && "Recon AI"}
-                {status === 'error' && "Error"}
+                {status === 'error' && "Connection Error"}
             </h3>
             
             <p className="text-xs font-mono text-neutral-500 text-center max-w-[240px] leading-relaxed">
-                {status === 'error' ? "Microphone access denied or connection failed." : 
-                 contextCompany ? `Analyzing ${contextCompany.name}. Ask for strategy.` : "I'm listening. Ask me to find leads."}
+                {status === 'error' ? "Microphone access denied or connection dropped." : 
+                 contextCompany ? `Analyzing ${contextCompany.name}. Ask for recent news or strategy.` : "I'm listening. Ask me to find leads or research companies."}
             </p>
 
             {/* Dynamic Waveform */}
@@ -348,6 +359,12 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
                    ))}
                 </div>
             )}
+            
+            {/* Tool Indicators (Static for now, but implies capability) */}
+            <div className="absolute bottom-4 flex gap-3 text-neutral-600">
+               <Globe className="w-4 h-4 opacity-50" />
+               <Wifi className="w-4 h-4 opacity-50" />
+            </div>
         </div>
       </div>
     </div>

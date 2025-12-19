@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Plus, Building2, Flame, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Building2, Flame, ExternalLink, RefreshCw } from 'lucide-react';
 import { Company, SearchMode, Source } from '../types';
 
 interface SearchPaneProps {
@@ -35,6 +35,9 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   // Loading Message State
   const [loadingText, setLoadingText] = useState('Searching...');
   
+  // Infinite Scroll Ref
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!isSearching) return;
     
@@ -54,6 +57,23 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
     
     return () => clearInterval(interval);
   }, [isSearching]);
+
+  // Infinite Scroll Observer
+  useEffect(() => {
+    if (!onLoadMore || mode !== 'discovery' || isSearching || companies.length === 0) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        onLoadMore();
+      }
+    }, { threshold: 0.1 });
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [companies.length, isSearching, mode, onLoadMore]);
 
   const handleSubmit = () => {
     if (!onSearch) return;
@@ -184,7 +204,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
       <div className="h-6 w-full bg-gradient-to-b from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-950 dark:via-neutral-950 z-10 shrink-0"></div>
 
       {/* Results List - SCROLLABLE AREA */}
-      <div id="results-container" className="flex-1 overflow-y-auto -mx-2 px-2 pb-4 space-y-3 min-h-0">
+      <div id="results-container" className="flex-1 overflow-y-auto -mx-2 px-2 pb-4 space-y-3 min-h-0 custom-scrollbar">
         {companies.length === 0 && !isSearching && (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-60 animate-fade-in p-8">
              <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
@@ -261,23 +281,18 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
           );
         })}
         
-        {/* Load More Button - Only show in discovery mode */}
+        {/* Infinite Scroll Trigger Area */}
         {companies.length > 0 && mode === 'discovery' && (
-           <button
-              onClick={onLoadMore}
-              disabled={isSearching}
-              className={`
-                 w-full py-3 mt-4 rounded-xl border border-dashed border-neutral-300 dark:border-white/20 text-sm font-medium
-                 text-neutral-500 dark:text-neutral-400 hover:text-accent dark:hover:text-accent hover:border-accent dark:hover:border-accent
-                 transition-all flex items-center justify-center gap-2 group shrink-0
-                 ${isSearching ? 'opacity-50 cursor-wait' : ''}
-              `}
-           >
-              {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+           <div ref={loadMoreRef} className="py-4 flex flex-col items-center justify-center opacity-70">
               {isSearching ? (
-                  <span className="font-mono text-xs uppercase tracking-wide animate-pulse">{loadingText}</span>
-              ) : 'Load More Leads'}
-           </button>
+                 <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                    <span className="animate-pulse">Loading more leads...</span>
+                 </div>
+              ) : (
+                 <div className="h-4"></div> // Spacer trigger
+              )}
+           </div>
         )}
 
         {/* Verified Sources Footer */}

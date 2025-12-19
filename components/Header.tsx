@@ -34,12 +34,20 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, toggleTheme, onVoice
         {/* Controls */}
         <div className="flex items-center gap-4">
           
-          <div className="hidden md:flex items-center px-3 py-1 rounded-full bg-accent-dim border border-accent/20">
-            <Sparkles className="w-3 h-3 text-accent mr-2 animate-pulse" />
-            <span className="text-[10px] font-semibold text-accent uppercase tracking-wider">AI Powered</span>
-          </div>
+          <button
+            onClick={onVoiceToggle}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20 transition-all group"
+          >
+             <Mic className="w-4 h-4 group-hover:scale-110 transition-transform" />
+             <span className="hidden md:inline text-[10px] font-bold uppercase tracking-wider">Voice Mode</span>
+          </button>
 
           <div className="h-6 w-px bg-neutral-200 dark:bg-white/10 hidden md:block"></div>
+
+          <div className="hidden md:flex items-center px-3 py-1 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10">
+            <Sparkles className="w-3 h-3 text-neutral-400 mr-2" />
+            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">AI Active</span>
+          </div>
 
           <button 
             onClick={toggleTheme}
