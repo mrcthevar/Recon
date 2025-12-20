@@ -14,6 +14,20 @@ interface SearchPaneProps {
   isSearching?: boolean;
 }
 
+const SkeletonCard = () => (
+  <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-neutral-900/50 space-y-3 animate-pulse">
+    <div className="flex justify-between items-start">
+        <div className="space-y-2 w-full">
+             <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3"></div>
+             <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/2"></div>
+        </div>
+        <div className="w-10 h-5 bg-neutral-200 dark:bg-neutral-800 rounded"></div>
+    </div>
+    <div className="h-2 bg-neutral-200 dark:bg-neutral-800 rounded w-full"></div>
+    <div className="h-2 bg-neutral-200 dark:bg-neutral-800 rounded w-2/3"></div>
+  </div>
+);
+
 export const SearchPane: React.FC<SearchPaneProps> = ({ 
   companies,
   sources = [],
@@ -114,21 +128,27 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                Search
              </h2>
              {/* Mode Toggles */}
-             <div className="flex p-1 rounded-lg bg-neutral-200 dark:bg-white/5 border border-neutral-200 dark:border-white/5">
+             <div className="flex p-1 rounded-lg bg-neutral-200 dark:bg-white/5 border border-neutral-200 dark:border-white/5" role="tablist">
                  <button
                     onClick={() => setMode('discovery')}
+                    role="tab"
+                    aria-selected={mode === 'discovery'}
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${mode === 'discovery' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                  >
                     Leads
                  </button>
                  <button
                     onClick={() => setMode('jobs')}
+                    role="tab"
+                    aria-selected={mode === 'jobs'}
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${mode === 'jobs' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                  >
                     Jobs
                  </button>
                  <button
                     onClick={() => setMode('lookup')}
+                    role="tab"
+                    aria-selected={mode === 'lookup'}
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${mode === 'lookup' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                  >
                     Lookup
@@ -148,6 +168,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     value={industry}
                     onChange={(e) => setIndustry(e.target.value)}
                     placeholder="Industry (e.g. SaaS)"
+                    aria-label="Industry"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
                     />
@@ -162,6 +183,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="City (e.g. London)"
+                    aria-label="City"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
                     />
@@ -180,6 +202,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     placeholder="Role (e.g. Copywriter)"
+                    aria-label="Role"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
                     />
@@ -194,6 +217,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     value={jobCity}
                     onChange={(e) => setJobCity(e.target.value)}
                     placeholder="City (e.g. Mumbai)"
+                    aria-label="City"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
                     />
@@ -212,6 +236,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Company Name"
+                    aria-label="Company Name"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
                     />
@@ -226,6 +251,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     value={lookupCity}
                     onChange={(e) => setLookupCity(e.target.value)}
                     placeholder="City (Optional)"
+                    aria-label="City"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
                     />
@@ -263,101 +289,112 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
 
       {/* Results List - SCROLLABLE AREA */}
       <div id="results-container" className="flex-1 overflow-y-auto -mx-2 px-2 pb-4 space-y-3 min-h-0 custom-scrollbar">
-        {companies.length === 0 && !isSearching && (
-          <div className="h-full flex flex-col items-center justify-center text-center opacity-60 animate-fade-in p-8">
-             <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
-                 <Radar className="w-8 h-8 text-neutral-400" />
+        {isSearching && companies.length === 0 ? (
+             <div className="space-y-3">
+                 <SkeletonCard />
+                 <SkeletonCard />
+                 <SkeletonCard />
+                 <SkeletonCard />
              </div>
-             <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
-               Ready to Search
-             </h3>
-             <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
-                Enter your search criteria above to begin.
-             </p>
-          </div>
-        )}
-
-        {companies.map((company, index) => {
-          const isSelected = selectedCompanyId === company.id;
-          const animationDelay = `${(index % 10) * 50}ms`;
-          const hotColor = getHotScoreColor(company.hotScore);
-          const openRolesCount = company.openRoles?.length || 0;
-          
-          return (
-            <div
-              key={company.id}
-              onClick={() => onSelectCompany(company.id)}
-              style={{ animationDelay }}
-              className={`
-                relative p-4 rounded-xl border cursor-pointer transition-all duration-300 group opacity-0 animate-fade-in-up
-                ${isSelected 
-                  ? 'bg-white dark:bg-neutral-800 border-accent shadow-md ring-1 ring-accent z-10 scale-[1.01]' 
-                  : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-sm hover:bg-white dark:hover:bg-neutral-800/80'}
-              `}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1 mr-2">
-                  <h3 className={`font-semibold text-sm transition-colors ${isSelected ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white'}`}>
-                    {company.name}
-                  </h3>
-                  <div className="flex items-center mt-1 space-x-2">
-                      {company.website !== 'N/A' && (
-                        <>
-                          <Globe className="w-3 h-3 text-neutral-400 group-hover:text-accent transition-colors" />
-                          <a 
-                             href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
-                             target="_blank" 
-                             rel="noreferrer"
-                             onClick={(e) => e.stopPropagation()} 
-                             className="text-xs text-neutral-500 hover:text-accent hover:underline truncate max-w-[150px] transition-colors"
-                          >
-                            {company.website.replace(/^https?:\/\/(www\.)?/, '')}
-                          </a>
-                        </>
-                      )}
-                  </div>
-                  {openRolesCount > 0 && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase">
-                          <UserSearch className="w-3 h-3" />
-                          {openRolesCount} Open Role{openRolesCount !== 1 && 's'}
-                      </div>
-                  )}
+        ) : (
+            <>
+                {companies.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-60 animate-fade-in p-8">
+                    <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
+                        <Radar className="w-8 h-8 text-neutral-400" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
+                    Ready to Search
+                    </h3>
+                    <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
+                        Enter your search criteria above to begin.
+                    </p>
                 </div>
+                )}
 
-                {/* Hot Score Badge */}
-                <div className={`
-                    flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-white shadow-sm
-                    bg-gradient-to-r ${hotColor}
-                `}>
-                    <Flame className="w-3 h-3 fill-white/90" />
-                    <span>{company.hotScore}%</span>
+                {companies.map((company, index) => {
+                const isSelected = selectedCompanyId === company.id;
+                const animationDelay = `${(index % 10) * 50}ms`;
+                const hotColor = getHotScoreColor(company.hotScore);
+                const openRolesCount = company.openRoles?.length || 0;
+                
+                return (
+                    <div
+                    key={company.id}
+                    onClick={() => onSelectCompany(company.id)}
+                    style={{ animationDelay }}
+                    className={`
+                        relative p-4 rounded-xl border cursor-pointer transition-all duration-300 group opacity-0 animate-fade-in-up
+                        ${isSelected 
+                        ? 'bg-white dark:bg-neutral-800 border-accent shadow-md ring-1 ring-accent z-10 scale-[1.01]' 
+                        : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-sm hover:bg-white dark:hover:bg-neutral-800/80'}
+                    `}
+                    >
+                    <div className="flex justify-between items-start">
+                        <div className="flex-1 mr-2">
+                        <h3 className={`font-semibold text-sm transition-colors ${isSelected ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white'}`}>
+                            {company.name}
+                        </h3>
+                        <div className="flex items-center mt-1 space-x-2">
+                            {company.website !== 'N/A' && (
+                                <>
+                                <Globe className="w-3 h-3 text-neutral-400 group-hover:text-accent transition-colors" />
+                                <a 
+                                    href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    onClick={(e) => e.stopPropagation()} 
+                                    className="text-xs text-neutral-500 hover:text-accent hover:underline truncate max-w-[150px] transition-colors"
+                                >
+                                    {company.website.replace(/^https?:\/\/(www\.)?/, '')}
+                                </a>
+                                </>
+                            )}
+                        </div>
+                        {openRolesCount > 0 && (
+                            <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase">
+                                <UserSearch className="w-3 h-3" />
+                                {openRolesCount} Open Role{openRolesCount !== 1 && 's'}
+                            </div>
+                        )}
+                        </div>
+
+                        {/* Hot Score Badge */}
+                        <div className={`
+                            flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-white shadow-sm
+                            bg-gradient-to-r ${hotColor}
+                        `}>
+                            <Flame className="w-3 h-3 fill-white/90" />
+                            <span>{company.hotScore}%</span>
+                        </div>
+                    </div>
+                    
+                    {/* Active Indicator Slide-in */}
+                    <div className={`
+                        mt-3 flex items-center text-xs font-medium text-accent overflow-hidden transition-all duration-300 ease-out
+                        ${isSelected ? 'max-h-6 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-2'}
+                    `}>
+                        <span>Selected</span>
+                        <ChevronRight className="w-3 h-3 ml-1" />
+                    </div>
+                    </div>
+                );
+                })}
+                
+                {/* Infinite Scroll Trigger Area */}
+                {companies.length > 0 && (mode === 'discovery' || mode === 'jobs') && (
+                <div ref={loadMoreRef} className="py-4 flex flex-col items-center justify-center opacity-70">
+                    {isSearching ? (
+                        <div className="flex items-center gap-2 text-xs text-neutral-500">
+                            <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                            <span className="animate-pulse">Loading more results...</span>
+                        </div>
+                    ) : (
+                        <div className="h-4"></div> // Spacer trigger
+                    )}
                 </div>
-              </div>
-              
-              {/* Active Indicator Slide-in */}
-              <div className={`
-                  mt-3 flex items-center text-xs font-medium text-accent overflow-hidden transition-all duration-300 ease-out
-                  ${isSelected ? 'max-h-6 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-2'}
-              `}>
-                  <span>Selected</span>
-                  <ChevronRight className="w-3 h-3 ml-1" />
-              </div>
-            </div>
-          );
-        })}
-        
-        {/* Infinite Scroll Trigger Area */}
-        {companies.length > 0 && (mode === 'discovery' || mode === 'jobs') && (
-           <div ref={loadMoreRef} className="py-4 flex flex-col items-center justify-center opacity-70">
-              {isSearching ? (
-                 <div className="flex items-center gap-2 text-xs text-neutral-500">
-                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                    <span className="animate-pulse">Loading more results...</span>
-                 </div>
-              ) : (
-                 <div className="h-4"></div> // Spacer trigger
-              )}
-           </div>
+                )}
+            </>
         )}
 
         {/* Verified Sources Footer */}

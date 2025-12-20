@@ -139,15 +139,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="h-full flex flex-col bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-white/5">
       {/* View Toggle Header */}
       <div className="p-4 border-b border-neutral-200 dark:border-white/5 bg-neutral-100/50 dark:bg-white/5">
-          <div className="flex bg-white dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-white/5 mb-3">
+          <div className="flex bg-white dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-white/5 mb-3" role="tablist">
               <button 
                 onClick={() => setView('companies')}
+                role="tab"
+                aria-selected={view === 'companies'}
                 className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${view === 'companies' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500'}`}
               >
                   <Archive className="w-3 h-3" /> Leads
               </button>
               <button 
                 onClick={() => setView('jobs')}
+                role="tab"
+                aria-selected={view === 'jobs'}
                 className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${view === 'jobs' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500'}`}
               >
                   <Briefcase className="w-3 h-3" /> Pipeline
@@ -164,6 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={toggleSelectionMode}
                     className={`p-1.5 rounded transition-colors ${isSelectionMode ? 'text-accent bg-accent/10' : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}
                     title="Toggle Selection Mode"
+                    aria-label="Toggle Selection Mode"
                 >
                     <CheckSquare className="w-4 h-4" />
                 </button>
@@ -186,6 +191,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div
                         key={company.id}
                         onClick={() => isSelectionMode ? toggleSelection(company.id, { stopPropagation: () => {} } as any) : onSelectCompany(company)}
+                        role="button"
+                        aria-pressed={selectedCompanyId === company.id}
                         className={`
                         group relative p-3 rounded-lg cursor-pointer border transition-all duration-200 flex items-center gap-3
                         ${selectedCompanyId === company.id 
@@ -196,6 +203,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {isSelectionMode && (
                         <div 
                             onClick={(e) => toggleSelection(company.id, e)}
+                            role="checkbox"
+                            aria-checked={isChecked}
                             className={`shrink-0 text-neutral-400 ${isChecked ? 'text-accent' : 'hover:text-neutral-500'}`}
                         >
                             {isChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
@@ -217,6 +226,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             onClick={(e) => { e.stopPropagation(); onRemoveCompanies([company.id]); }}
                             className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 text-neutral-400 transition-opacity"
                             title="Remove Lead"
+                            aria-label="Remove Lead"
                         >
                             <Trash2 className="w-3 h-3" />
                         </button>
@@ -253,6 +263,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 {isSelectionMode && (
                                     <div 
                                         onClick={(e) => toggleSelection(job.id, e)}
+                                        role="checkbox"
+                                        aria-checked={isChecked}
                                         className={`mt-1 shrink-0 text-neutral-400 cursor-pointer ${isChecked ? 'text-accent' : 'hover:text-neutral-500'}`}
                                     >
                                         {isChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
@@ -266,6 +278,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             value={job.status || 'Saved'}
                                             onChange={(e) => onUpdateJobStatus(job.id, e.target.value as any)}
                                             onClick={(e) => e.stopPropagation()}
+                                            aria-label="Update Job Status"
                                             className={`text-[9px] font-bold uppercase rounded px-1.5 py-0.5 border-none outline-none cursor-pointer text-white ${statusColors[job.status || 'Saved'] || 'bg-neutral-500'}`}
                                         >
                                             <option value="Saved" className="text-black">Saved</option>
@@ -280,6 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         onClick={(e) => { e.stopPropagation(); onRemoveJobs([job.id]); }}
                                         className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 text-neutral-400 transition-opacity"
                                         title="Remove Job"
+                                        aria-label="Remove Job"
                                     >
                                         <Trash2 className="w-3 h-3" />
                                     </button>

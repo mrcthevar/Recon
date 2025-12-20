@@ -195,6 +195,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
              
              <button 
                 onClick={onToggleSave}
+                aria-label={isSaved ? "Remove Company" : "Save Company"}
                 className={`p-2 rounded-lg border transition-all ${isSaved ? 'bg-accent/10 border-accent text-accent' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-white/10 text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}
                 title={isSaved ? "Remove Company" : "Save Company"}
              >
@@ -210,12 +211,25 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
              </div>
              <div className="flex gap-2">
                  {socialLinks.map(link => (
-                     <a key={link.key} href={link.url} target="_blank" rel="noreferrer" className="p-1.5 rounded-md hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-colors">
+                     <a 
+                        key={link.key} 
+                        href={link.url} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        aria-label={`Visit ${link.url}`}
+                        className="p-1.5 rounded-md hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-colors"
+                     >
                         {link.icon}
                      </a>
                  ))}
                  {company.website !== 'N/A' && (
-                     <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noreferrer" className="p-1.5 rounded-md hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-colors">
+                     <a 
+                        href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        aria-label="Visit Website"
+                        className="p-1.5 rounded-md hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-colors"
+                     >
                         <Globe className="w-4 h-4" />
                      </a>
                  )}
@@ -224,11 +238,13 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-neutral-200 dark:border-white/5">
+      <div className="flex border-b border-neutral-200 dark:border-white/5" role="tablist">
           {['overview', 'insights', 'jobs', 'outreach'].map((tab) => (
              <button 
                 key={tab}
                 onClick={() => setActiveTab(tab as Tab)} 
+                role="tab"
+                aria-selected={activeTab === tab}
                 className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 
                     ${activeTab === tab 
                         ? 'border-accent text-accent bg-accent/5' 
@@ -352,6 +368,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                                                 setTargetJobTitle(role.title);
                                                 setActiveTab('outreach');
                                             }}
+                                            aria-label="Draft Application"
                                             className="p-2 text-neutral-400 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
                                             title="Draft Application"
                                         >
@@ -359,6 +376,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                                         </button>
                                         <button 
                                             onClick={() => onTrackJob(role)}
+                                            aria-label={tracked ? "Job Tracked" : "Track Role"}
                                             className={`p-2 rounded-lg transition-colors border ${tracked ? 'bg-green-500/10 border-green-500 text-green-500' : 'bg-transparent border-neutral-200 dark:border-white/10 text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}
                                             title={tracked ? "Tracked" : "Track Role"}
                                         >
@@ -405,6 +423,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                             value={targetJobTitle}
                             onChange={(e) => setTargetJobTitle(e.target.value)}
                             placeholder="Target Role..."
+                            aria-label="Target Role"
                             className="bg-transparent border-b border-neutral-200 dark:border-white/10 px-2 py-1 text-xs text-right focus:outline-none focus:border-accent w-32"
                          />
                      )}
@@ -442,12 +461,14 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                             value={skills}
                             onChange={(e) => setSkills(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                            aria-label="Your Skills"
                             placeholder={outreachContext === 'job_application' ? "e.g. 5 yrs Exp in React, UI Design" : "e.g. SEO services for e-commerce"} 
                             className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                         <button 
                             onClick={handleGenerate}
                             disabled={!skills || isGenerating}
+                            aria-label="Generate Pitch"
                             className={`px-4 rounded-lg bg-accent text-white hover:bg-accent-glow disabled:opacity-50 transition-colors shadow-sm`}
                         >
                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
@@ -510,7 +531,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                         </div>
                          <div className="p-2 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-black/20 flex justify-between items-center">
                              <div className="flex gap-2 items-center">
-                                <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded transition-colors ${isEditing ? 'bg-accent/10 text-accent' : 'hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-500'}`} title={isEditing ? "Finish Editing" : "Edit Text"}>
+                                <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded transition-colors ${isEditing ? 'bg-accent/10 text-accent' : 'hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-500'}`} title={isEditing ? "Finish Editing" : "Edit Text"} aria-label={isEditing ? "Finish Editing" : "Edit Text"}>
                                     <Edit3 className="w-4 h-4" />
                                 </button>
                                 {pitchFormat === 'linkedin_connect' && (
@@ -521,11 +542,11 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                              </div>
                              <div className="flex gap-2">
                                 {pitchFormat === 'email' && (
-                                    <a href={`mailto:${company.email}?subject=${encodeURIComponent(currentPitch.subject)}&body=${encodeURIComponent(currentPitch.body)}`} className="p-2 rounded hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white" title="Open Mail Client">
+                                    <a href={`mailto:${company.email}?subject=${encodeURIComponent(currentPitch.subject)}&body=${encodeURIComponent(currentPitch.body)}`} className="p-2 rounded hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white" title="Open Mail Client" aria-label="Open Mail Client">
                                         <Mail className="w-4 h-4" />
                                     </a>
                                 )}
-                                <button onClick={() => copyToClipboard((pitchFormat === 'email' || pitchFormat === 'linkedin_inmail') ? `Subject: ${currentPitch.subject}\n\n${currentPitch.body}` : currentPitch.body)} className="flex items-center gap-2 px-3 py-1.5 rounded bg-accent text-white shadow-sm hover:bg-accent-glow text-xs font-bold uppercase transition-colors">
+                                <button onClick={() => copyToClipboard((pitchFormat === 'email' || pitchFormat === 'linkedin_inmail') ? `Subject: ${currentPitch.subject}\n\n${currentPitch.body}` : currentPitch.body)} className="flex items-center gap-2 px-3 py-1.5 rounded bg-accent text-white shadow-sm hover:bg-accent-glow text-xs font-bold uppercase transition-colors" aria-label="Copy to Clipboard">
                                     {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                                     <span>{copied ? 'Copied' : 'Copy'}</span>
                                 </button>
