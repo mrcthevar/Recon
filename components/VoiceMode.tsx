@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, X, Activity, Volume2, Globe, Wifi } from 'lucide-react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
@@ -110,10 +111,12 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
           },
           systemInstruction: `You are Recon's Voice Assistant. Keep responses concise, punchy, and professional. 
-          You help the user analyze companies and strategize sales pitches.
-          If the user is looking at a specific company, focus on that.
-          Do not be verbose. Be helpful and direct.
-          Use Google Search to answer questions about recent news or company details.`,
+          You help users find leads, analyze companies, AND find jobs/roles.
+          
+          If the user asks to "find jobs" or "find roles", use Google Search to find current openings.
+          If the user is looking at a specific company, focus on that context.
+          
+          Do not be verbose. Be helpful and direct.`,
         };
 
         sessionPromiseRef.current = ai.live.connect({
@@ -170,7 +173,8 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
               if (contextCompany) {
                  const initialContext = `User is analyzing: ${contextCompany.name} (${contextCompany.industry}). 
                  Description: ${contextCompany.description.substring(0, 200)}...
-                 Key Needs: ${contextCompany.needs.join(', ')}.`;
+                 Key Needs: ${contextCompany.needs.join(', ')}.
+                 Open Roles: ${contextCompany.openRoles ? contextCompany.openRoles.map(r => r.title).join(', ') : 'None detected'}`;
                  
                  sessionPromiseRef.current?.then(session => {
                      session.sendRealtimeInput({ text: initialContext });
@@ -339,7 +343,7 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
             
             <p className="text-xs font-mono text-neutral-500 text-center max-w-[240px] leading-relaxed">
                 {status === 'error' ? "Microphone access denied or connection dropped." : 
-                 contextCompany ? `Analyzing ${contextCompany.name}. Ask for recent news or strategy.` : "I'm listening. Ask me to find leads or research companies."}
+                 contextCompany ? `Analyzing ${contextCompany.name}. Ask for open roles or contact info.` : "I'm listening. Ask me to find jobs, leads, or analyze companies."}
             </p>
 
             {/* Dynamic Waveform */}

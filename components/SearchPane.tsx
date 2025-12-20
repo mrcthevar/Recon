@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Building2, Flame, ExternalLink, RefreshCw } from 'lucide-react';
+import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Building2, Flame, ExternalLink, RefreshCw, UserSearch } from 'lucide-react';
 import { Company, SearchMode, Source } from '../types';
 
 interface SearchPaneProps {
@@ -32,6 +33,10 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   const [companyName, setCompanyName] = useState('');
   const [lookupCity, setLookupCity] = useState('');
 
+  // Jobs Inputs
+  const [role, setRole] = useState('');
+  const [jobCity, setJobCity] = useState('');
+
   // Loading Message State
   const [loadingText, setLoadingText] = useState('Searching...');
   
@@ -41,7 +46,13 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   useEffect(() => {
     if (!isSearching) return;
     
-    const messages = [
+    const messages = mode === 'jobs' ? [
+        "Scanning Job Boards...",
+        "Identifying Companies...",
+        "Checking Career Pages...",
+        "Evaluating Hiring Culture...",
+        "Compiling Open Roles..."
+    ] : [
         "Analyzing Industry...",
         "Finding Companies...",
         "Finding Contact Info...",
@@ -56,11 +67,11 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
     }, 1200);
     
     return () => clearInterval(interval);
-  }, [isSearching]);
+  }, [isSearching, mode]);
 
   // Infinite Scroll Observer
   useEffect(() => {
-    if (!onLoadMore || mode !== 'discovery' || isSearching || companies.length === 0) return;
+    if (!onLoadMore || mode === 'lookup' || isSearching || companies.length === 0) return;
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
@@ -80,6 +91,8 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
 
     if (mode === 'discovery') {
        if (industry && city) onSearch('discovery', industry, city);
+    } else if (mode === 'jobs') {
+       if (role && jobCity) onSearch('jobs', role, jobCity);
     } else {
        if (companyName) onSearch('lookup', companyName, lookupCity || 'Anywhere'); 
     }
@@ -98,7 +111,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
       <div className="mb-2 space-y-4 relative z-10 bg-neutral-50 dark:bg-neutral-950 pb-2">
         <div className="flex items-center justify-between px-1">
              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
-               Search & Leads
+               Search
              </h2>
              {/* Mode Toggles */}
              <div className="flex p-1 rounded-lg bg-neutral-200 dark:bg-white/5 border border-neutral-200 dark:border-white/5">
@@ -106,7 +119,13 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     onClick={() => setMode('discovery')}
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${mode === 'discovery' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                  >
-                    Discover
+                    Leads
+                 </button>
+                 <button
+                    onClick={() => setMode('jobs')}
+                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${mode === 'jobs' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                 >
+                    Jobs
                  </button>
                  <button
                     onClick={() => setMode('lookup')}
@@ -118,7 +137,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
         </div>
         
         <div className="space-y-3">
-          {mode === 'discovery' ? (
+          {mode === 'discovery' && (
               <>
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -128,7 +147,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     type="text"
                     value={industry}
                     onChange={(e) => setIndustry(e.target.value)}
-                    placeholder="Industry (e.g. Fintech)"
+                    placeholder="Industry (e.g. SaaS)"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
                     />
@@ -148,7 +167,41 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     />
                 </div>
               </>
-          ) : (
+          )}
+
+          {mode === 'jobs' && (
+              <>
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <UserSearch className="h-4 w-4 text-neutral-400 group-focus-within:text-accent transition-colors duration-300" />
+                    </div>
+                    <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder="Role (e.g. Copywriter)"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
+                    />
+                </div>
+                
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-4 w-4 text-neutral-400 group-focus-within:text-accent transition-colors duration-300" />
+                    </div>
+                    <input
+                    type="text"
+                    value={jobCity}
+                    onChange={(e) => setJobCity(e.target.value)}
+                    placeholder="City (e.g. Mumbai)"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
+                    />
+                </div>
+              </>
+          )}
+
+          {mode === 'lookup' && (
               <>
                  <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -182,10 +235,15 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
 
           <button 
             onClick={handleSubmit}
-            disabled={isSearching || (mode === 'discovery' ? (!industry || !city) : !companyName)}
+            disabled={
+                isSearching || 
+                (mode === 'discovery' ? (!industry || !city) : 
+                 mode === 'jobs' ? (!role || !jobCity) : 
+                 !companyName)
+            }
             className={`
               w-full flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all duration-300 shadow-lg 
-              ${isSearching || (mode === 'discovery' ? (!industry || !city) : !companyName)
+              ${isSearching || (mode === 'discovery' ? (!industry || !city) : mode === 'jobs' ? (!role || !jobCity) : !companyName)
                 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed shadow-none' 
                 : 'bg-accent hover:bg-accent-glow text-white shadow-accent/20 hover:shadow-accent/40 active:scale-[0.98]'}
             `}
@@ -194,7 +252,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
             {isSearching && companies.length === 0 ? (
                 <span className="font-mono text-xs uppercase tracking-wide animate-pulse">{loadingText}</span>
             ) : (
-                mode === 'discovery' ? 'Find Leads' : 'Search Company'
+                mode === 'discovery' ? 'Find Leads' : mode === 'jobs' ? 'Find Jobs' : 'Lookup'
             )}
           </button>
         </div>
@@ -214,7 +272,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                Ready to Search
              </h3>
              <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
-               {mode === 'discovery' ? "Enter an Industry and City above to find leads." : "Enter a Company Name to find contact details."}
+                Enter your search criteria above to begin.
              </p>
           </div>
         )}
@@ -223,6 +281,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
           const isSelected = selectedCompanyId === company.id;
           const animationDelay = `${(index % 10) * 50}ms`;
           const hotColor = getHotScoreColor(company.hotScore);
+          const openRolesCount = company.openRoles?.length || 0;
           
           return (
             <div
@@ -257,6 +316,12 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                         </>
                       )}
                   </div>
+                  {openRolesCount > 0 && (
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase">
+                          <UserSearch className="w-3 h-3" />
+                          {openRolesCount} Open Role{openRolesCount !== 1 && 's'}
+                      </div>
+                  )}
                 </div>
 
                 {/* Hot Score Badge */}
@@ -282,12 +347,12 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
         })}
         
         {/* Infinite Scroll Trigger Area */}
-        {companies.length > 0 && mode === 'discovery' && (
+        {companies.length > 0 && (mode === 'discovery' || mode === 'jobs') && (
            <div ref={loadMoreRef} className="py-4 flex flex-col items-center justify-center opacity-70">
               {isSearching ? (
                  <div className="flex items-center gap-2 text-xs text-neutral-500">
                     <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                    <span className="animate-pulse">Loading more leads...</span>
+                    <span className="animate-pulse">Loading more results...</span>
                  </div>
               ) : (
                  <div className="h-4"></div> // Spacer trigger

@@ -5,6 +5,21 @@ interface Env {
   API_KEY: string;
 }
 
+// Utility to clean LLM output (strip markdown) before parsing
+const cleanAndParseJSON = (text: string) => {
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+        const start = cleaned.indexOf('{');
+        const end = cleaned.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+            return JSON.parse(cleaned.substring(start, end + 1));
+        }
+        throw e;
+    }
+};
+
 export const onRequestPost = async (context: any) => {
   try {
     if (typeof process === 'undefined') {
@@ -21,7 +36,16 @@ export const onRequestPost = async (context: any) => {
       });
     }
 
-    const { companyName, industry, userSkills, tone, companySignals, format = 'email' } = await request.json();
+    const { 
+      companyName, 
+      industry, 
+      userSkills, 
+      tone, 
+      companySignals, 
+      format = 'email', 
+      context: pitchContext = 'sales',
+      jobTitle 
+    } = await request.json();
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
     const model = 'gemini-3-flash-preview';
@@ -30,45 +54,73 @@ export const onRequestPost = async (context: any) => {
     if (companySignals && companySignals.length > 0) {
         contextStr = `COMPANY FACTS:\n${companySignals.join('\n')}\n`;
     }
+    
+    if (jobTitle) {
+        contextStr += `\nTARGET ROLE: ${jobTitle}\n`;
+    }
 
     let specificInstructions = "";
-    if (format === 'linkedin_connect') {
-      specificInstructions = `
-      FORMAT: LinkedIn Connection Request
-      LENGTH: STRICTLY UNDER 300 CHARACTERS.
-      SUBJECT LINE: Return an empty string "".
-      STYLE: Casual, direct, mention the specific company fact.
-      `;
-    } else if (format === 'linkedin_inmail') {
-      specificInstructions = `
-      FORMAT: LinkedIn InMail
-      LENGTH: Under 150 words.
-      SUBJECT LINE: Required. Professional and catchy.
-      STYLE: Conversational B2B.
-      `;
-    } else {
-      specificInstructions = `
-      FORMAT: Cold Email
-      LENGTH: Under 100 words.
-      SUBJECT LINE: Required. Intriguing.
-      STYLE: ${tone}
-      `;
+    
+    // JOB APPLICATION MODE
+    if (pitchContext === 'job_application') {
+       if (format === 'linkedin_connect') {
+        specificInstructions = `
+        CONTEXT: Applying for ${jobTitle || 'a job'}.
+        FORMAT: LinkedIn Connection Request to Hiring Manager.
+        LENGTH: STRICTLY UNDER 300 CHARACTERS.
+        SUBJECT LINE: Return an empty string "".
+        STYLE: Professional, expressing interest, mention skills.
+        `;
+      } else {
+        specificInstructions = `
+        CONTEXT: Job Application for ${jobTitle || 'a role'}.
+        FORMAT: Cover Email / Cold Email to Hiring Manager.
+        LENGTH: Under 150 words.
+        SUBJECT LINE: Required. Professional (e.g., Application for ${jobTitle} - [Name]).
+        STYLE: Confident, matching skills to company needs.
+        `;
+      }
+    } 
+    // SALES MODE
+    else {
+      if (format === 'linkedin_connect') {
+        specificInstructions = `
+        FORMAT: LinkedIn Connection Request
+        LENGTH: STRICTLY UNDER 300 CHARACTERS.
+        SUBJECT LINE: Return an empty string "".
+        STYLE: Casual, direct, mention the specific company fact.
+        `;
+      } else if (format === 'linkedin_inmail') {
+        specificInstructions = `
+        FORMAT: LinkedIn InMail
+        LENGTH: Under 150 words.
+        SUBJECT LINE: Required. Professional and catchy.
+        STYLE: Conversational B2B.
+        `;
+      } else {
+        specificInstructions = `
+        FORMAT: Cold Email
+        LENGTH: Under 100 words.
+        SUBJECT LINE: Required. Intriguing.
+        STYLE: ${tone}
+        `;
+      }
     }
 
     const prompt = `
       Target: ${companyName} (${industry})
-      My Skills: ${userSkills}
+      My Skills/Offer: ${userSkills}
       ${contextStr}
       ${specificInstructions}
       
       Generate 3 variations:
-      1. Evidence-Based (Lead with facts)
-      2. Solution-Focused (Lead with value)
-      3. Low-Friction (Short ask)
+      1. Direct & Professional
+      2. Value/Skill Focused
+      3. Culture/Research Focused (Reference a fact)
     `;
 
     const systemInstruction = `
-      You are an elite B2B sales copywriter.
+      You are an elite business communicator.
       1. Reference provided company facts.
       2. No hashtags.
       3. No buzzwords like "delve", "tapestry", "unlock".
@@ -103,12 +155,20 @@ export const onRequestPost = async (context: any) => {
       },
     });
 
-    const data = JSON.parse(response.text || "{}");
-
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    try {
+        // Robust parsing using utility
+        const data = cleanAndParseJSON(response.text || "{}");
+        return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+        });
+    } catch (e) {
+        console.error("Backend Pitch JSON Error:", e);
+        return new Response(JSON.stringify({ error: "Failed to generate pitch format." }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+        });
+    }
 
   } catch (error: any) {
     console.error("Backend Pitch Error:", error);
@@ -118,4 +178,3 @@ export const onRequestPost = async (context: any) => {
     });
   }
 };
-    

@@ -1,19 +1,28 @@
 
+
 import React, { useState } from 'react';
-import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase, UserPlus, Search, FileText } from 'lucide-react';
-import { Company, Pitch } from '../types';
+import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase, UserPlus, Search, FileText, UserSearch, Briefcase as BriefcaseIcon, PlusCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import { Company, Pitch, Job, SavedJob } from '../types';
 import { generatePitch } from '../services/geminiService';
 
 interface IntelligencePaneProps {
   company: Company | null;
   onToggleSave: () => void;
   isSaved: boolean;
+  onTrackJob: (job: Job) => void;
+  savedJobs: SavedJob[];
 }
 
-type Tab = 'overview' | 'insights' | 'outreach';
+type Tab = 'overview' | 'insights' | 'jobs' | 'outreach';
 type PitchFormat = 'email' | 'linkedin_connect' | 'linkedin_inmail';
 
-export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onToggleSave, isSaved }) => {
+export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ 
+    company, 
+    onToggleSave, 
+    isSaved,
+    onTrackJob,
+    savedJobs 
+}) => {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [skills, setSkills] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -22,12 +31,17 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [pitchFormat, setPitchFormat] = useState<PitchFormat>('email');
+  
+  // Outreach Context State
+  const [outreachContext, setOutreachContext] = useState<'sales' | 'job_application'>('sales');
+  const [targetJobTitle, setTargetJobTitle] = useState('');
 
   React.useEffect(() => {
     setGeneratedPitches([]);
     setActivePitchIndex(0);
     setIsEditing(false);
     setActiveTab('overview');
+    // Default to 'jobs' tab if company has open roles and we are in that mindset? No, Overview is safer.
   }, [company?.id]);
 
   const handleFormatChange = (format: PitchFormat) => {
@@ -53,7 +67,9 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
         userSkills: skills,
         tone: 'Professional',
         companySignals: signalContext,
-        format: pitchFormat
+        format: pitchFormat,
+        context: outreachContext,
+        jobTitle: targetJobTitle
       });
       setGeneratedPitches(results);
     } catch (e) {
@@ -125,7 +141,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                     </div>
                     <div>
                         <h4 className="text-sm font-bold text-neutral-900 dark:text-white">1. Discover</h4>
-                        <p className="text-xs text-neutral-500 mt-1">Search by Industry & City (e.g., "SaaS in Austin") or Lookup specific companies.</p>
+                        <p className="text-xs text-neutral-500 mt-1">Search by Industry, City or Role (e.g., "Copywriter in Mumbai") to find leads.</p>
                     </div>
                 </div>
                 
@@ -134,8 +150,8 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                         <FileText className="w-4 h-4 text-purple-500" />
                     </div>
                     <div>
-                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">2. Analyze</h4>
-                        <p className="text-xs text-neutral-500 mt-1">Select a lead to view verified contact info, growth signals, and key decision data.</p>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">2. Analyze & Track Jobs</h4>
+                        <p className="text-xs text-neutral-500 mt-1">View open roles, verified contact info, and track your application pipeline.</p>
                     </div>
                 </div>
 
@@ -145,7 +161,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                     </div>
                     <div>
                         <h4 className="text-sm font-bold text-neutral-900 dark:text-white">3. Outreach</h4>
-                        <p className="text-xs text-neutral-500 mt-1">Use the Outreach tab to generate AI-personalized emails or LinkedIn messages based on your skills.</p>
+                        <p className="text-xs text-neutral-500 mt-1">Generate AI-personalized emails or job applications tailored to the company.</p>
                     </div>
                 </div>
             </div>
@@ -156,6 +172,9 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
 
   const socialLinks = getSocialLinks();
   const currentPitch = generatedPitches[activePitchIndex];
+
+  // Helper to check if a job is tracked
+  const isJobTracked = (jobId: string) => savedJobs.some(j => j.id === jobId);
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-white/10 shadow-glass overflow-hidden">
@@ -177,7 +196,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
              <button 
                 onClick={onToggleSave}
                 className={`p-2 rounded-lg border transition-all ${isSaved ? 'bg-accent/10 border-accent text-accent' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-white/10 text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}
-                title={isSaved ? "Remove from List" : "Save to List"}
+                title={isSaved ? "Remove Company" : "Save Company"}
              >
                  <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-accent' : ''}`} />
              </button>
@@ -206,9 +225,18 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
 
       {/* Navigation Tabs */}
       <div className="flex border-b border-neutral-200 dark:border-white/5">
-          <button onClick={() => setActiveTab('overview')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'overview' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Overview</button>
-          <button onClick={() => setActiveTab('insights')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'insights' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Insights</button>
-          <button onClick={() => setActiveTab('outreach')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'outreach' ? 'border-accent text-accent bg-accent/5' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>Outreach</button>
+          {['overview', 'insights', 'jobs', 'outreach'].map((tab) => (
+             <button 
+                key={tab}
+                onClick={() => setActiveTab(tab as Tab)} 
+                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 
+                    ${activeTab === tab 
+                        ? 'border-accent text-accent bg-accent/5' 
+                        : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+             >
+                {tab}
+             </button>
+          ))}
       </div>
 
       {/* Content Area */}
@@ -246,6 +274,18 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                         </div>
                     </div>
                 </div>
+                
+                {company.hiringCulture && (
+                    <div className="bg-white dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-200 dark:border-white/5">
+                        <div className="flex items-center gap-2 mb-2 text-neutral-500">
+                            <UserSearch className="w-3 h-3" />
+                            <span className="text-xs font-bold uppercase">Hiring Culture</span>
+                        </div>
+                        <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                            {company.hiringCulture}
+                        </p>
+                    </div>
+                )}
             </div>
         )}
 
@@ -281,28 +321,113 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
              </div>
         )}
 
+        {/* TAB: JOBS */}
+        {activeTab === 'jobs' && (
+            <div className="space-y-4 animate-fade-in">
+                {(!company.openRoles || company.openRoles.length === 0) ? (
+                    <div className="text-center py-12 text-neutral-500 flex flex-col items-center">
+                        <BriefcaseIcon className="w-10 h-10 mb-3 opacity-30" />
+                        <p className="text-sm font-medium">No open roles detected.</p>
+                        <p className="text-xs opacity-70 mt-1">Try checking their Careers page directly.</p>
+                    </div>
+                ) : (
+                    <div className="grid gap-3">
+                        {company.openRoles.map((role, idx) => {
+                           const tracked = isJobTracked(role.id);
+                           return (
+                            <div key={idx} className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-neutral-200 dark:border-white/5 hover:border-accent/30 transition-all shadow-sm">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{role.title}</h4>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500 mt-1.5">
+                                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/> {role.location}</span>
+                                            {role.type && <span className="bg-neutral-100 dark:bg-white/5 px-1.5 py-0.5 rounded">{role.type}</span>}
+                                            {role.salary && <span className="text-emerald-600 dark:text-emerald-400 font-medium">{role.salary}</span>}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => {
+                                                setOutreachContext('job_application');
+                                                setTargetJobTitle(role.title);
+                                                setActiveTab('outreach');
+                                            }}
+                                            className="p-2 text-neutral-400 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
+                                            title="Draft Application"
+                                        >
+                                            <Send className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => onTrackJob(role)}
+                                            className={`p-2 rounded-lg transition-colors border ${tracked ? 'bg-green-500/10 border-green-500 text-green-500' : 'bg-transparent border-neutral-200 dark:border-white/10 text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}
+                                            title={tracked ? "Tracked" : "Track Role"}
+                                        >
+                                            {tracked ? <CheckCircle className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                                {role.link && (
+                                     <a href={role.link} target="_blank" rel="noreferrer" className="mt-3 text-xs text-accent hover:underline inline-flex items-center gap-1">
+                                         View Full Listing <ExternalLink className="w-3 h-3" />
+                                     </a>
+                                )}
+                            </div>
+                           );
+                        })}
+                    </div>
+                )}
+            </div>
+        )}
+
         {/* TAB: OUTREACH (COMMS) */}
         {activeTab === 'outreach' && (
             <div className="h-full flex flex-col animate-fade-in">
                 
-                <div className="flex flex-wrap items-center gap-2 mb-4 bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-lg border border-neutral-200 dark:border-white/5 w-fit">
+                {/* Context Switcher */}
+                <div className="flex items-center justify-between mb-4">
+                     <div className="flex p-1 bg-neutral-100 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-white/5">
+                        <button
+                            onClick={() => { setOutreachContext('sales'); setTargetJobTitle(''); }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${outreachContext === 'sales' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500'}`}
+                        >
+                            Sales Pitch
+                        </button>
+                        <button
+                            onClick={() => { setOutreachContext('job_application'); }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${outreachContext === 'job_application' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500'}`}
+                        >
+                            Job Application
+                        </button>
+                     </div>
+                     {outreachContext === 'job_application' && (
+                         <input 
+                            type="text" 
+                            value={targetJobTitle}
+                            onChange={(e) => setTargetJobTitle(e.target.value)}
+                            placeholder="Target Role..."
+                            className="bg-transparent border-b border-neutral-200 dark:border-white/10 px-2 py-1 text-xs text-right focus:outline-none focus:border-accent w-32"
+                         />
+                     )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 mb-4">
                     <button 
                         onClick={() => handleFormatChange('email')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${pitchFormat === 'email' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 border border-transparent ${pitchFormat === 'email' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white border-neutral-200 dark:border-white/5' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                     >
                         <Mail className="w-3.5 h-3.5" />
                         Email
                     </button>
                     <button 
                         onClick={() => handleFormatChange('linkedin_inmail')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${pitchFormat === 'linkedin_inmail' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 border border-transparent ${pitchFormat === 'linkedin_inmail' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white border-neutral-200 dark:border-white/5' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                     >
                         <Linkedin className="w-3.5 h-3.5" />
                         InMail
                     </button>
                     <button 
                         onClick={() => handleFormatChange('linkedin_connect')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${pitchFormat === 'linkedin_connect' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 border border-transparent ${pitchFormat === 'linkedin_connect' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white border-neutral-200 dark:border-white/5' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                     >
                         <UserPlus className="w-3.5 h-3.5" />
                         Connect
@@ -317,7 +442,7 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({ company, onT
                             value={skills}
                             onChange={(e) => setSkills(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                            placeholder="e.g. SEO services for e-commerce" 
+                            placeholder={outreachContext === 'job_application' ? "e.g. 5 yrs Exp in React, UI Design" : "e.g. SEO services for e-commerce"} 
                             className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                         <button 

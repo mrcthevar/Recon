@@ -6,6 +6,22 @@ export interface Signal {
   confidence: 'High' | 'Medium' | 'Low';
 }
 
+export interface Job {
+  id: string;
+  title: string;
+  location: string;
+  type: string;
+  salary?: string;
+  link?: string;
+  status?: 'Saved' | 'Applied' | 'Interviewing' | 'Offer';
+  notes?: string;
+}
+
+export interface SavedJob extends Job {
+  companyName: string;
+  companyId: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -23,6 +39,8 @@ export interface Company {
   scoreReasoning?: string;
   signals: Signal[];
   location: string;
+  openRoles?: Job[];
+  hiringCulture?: string;
 }
 
 export interface Source {
@@ -46,18 +64,21 @@ export interface PitchParams {
   industry: string;
   userSkills: string;
   tone: 'Professional' | 'Casual' | 'Bold';
-  companySignals?: string[]; // New: Pass signals to context
+  companySignals?: string[]; 
   format?: 'email' | 'linkedin_connect' | 'linkedin_inmail';
+  context?: 'sales' | 'job_application'; // New context
+  jobTitle?: string; // Specific job context
 }
 
-export type SearchMode = 'discovery' | 'lookup';
+export type SearchMode = 'discovery' | 'lookup' | 'jobs';
 
 export interface SearchParams {
   mode: SearchMode;
-  industry?: string;
+  industry?: string; // Used as Role in 'jobs' mode
   city: string;
   companyName?: string;
   excludeNames?: string[];
+  role?: string; // Explicit role field
 }
 
 export interface FileData {

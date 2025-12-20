@@ -1,12 +1,14 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { SearchPane } from './components/SearchPane';
 import { IntelligencePane } from './components/IntelligencePane';
 import { Sidebar } from './components/Sidebar';
 import { VoiceMode } from './components/VoiceMode';
-import { Company, SearchMode, SearchParams, Source } from './types';
+import { Company, SearchMode, SearchParams, Source, Job, SavedJob } from './types';
 import { findLeads } from './services/geminiService';
+import { safeStorage } from './utils/storage';
 import { Menu, ChevronRight, X, Mic } from 'lucide-react';
 
 // Simple Toast Component
@@ -17,14 +19,22 @@ const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 
   }, [onClose]);
 
   return (
-    <div className={`
+    <div 
+      role="alert"
+      className={`
         flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg shadow-black/20 border backdrop-blur-md animate-fade-in-up
         ${type === 'error' ? 'bg-red-500/90 text-white border-red-500' : 
           type === 'success' ? 'bg-emerald-500/90 text-white border-emerald-500' : 
           'bg-neutral-800/90 text-white border-neutral-700'}
     `}>
       <span className="text-sm font-medium">{message}</span>
-      <button onClick={onClose} className="opacity-70 hover:opacity-100 transition-opacity"><X size={14} /></button>
+      <button 
+        onClick={onClose} 
+        aria-label="Close notification"
+        className="opacity-70 hover:opacity-100 transition-opacity"
+      >
+        <X size={14} />
+      </button>
     </div>
   );
 };
@@ -49,11 +59,14 @@ const App: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Company[]>([]);
   const [searchSources, setSearchSources] = useState<Source[]>([]);
   
-  const [savedCompanies, setSavedCompanies] = useState<Company[]>(() => {
-    // Basic persistence
-    const saved = localStorage.getItem('recon_saved_targets');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [savedCompanies, setSavedCompanies] = useState<Company[]>(() => 
+    safeStorage.get<Company[]>('recon_saved_targets', [])
+  );
+  
+  // Job Tracking State
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>(() => 
+    safeStorage.get<SavedJob[]>('recon_saved_jobs', [])
+  );
 
   // Pre-fetching State
   const [nextBatch, setNextBatch] = useState<{ leads: Company[], sources: Source[] } | null>(null);
@@ -86,10 +99,14 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Persist Saved Companies
+  // Persist Data using Safe Storage
   useEffect(() => {
-    localStorage.setItem('recon_saved_targets', JSON.stringify(savedCompanies));
+    safeStorage.set('recon_saved_targets', savedCompanies);
   }, [savedCompanies]);
+
+  useEffect(() => {
+    safeStorage.set('recon_saved_jobs', savedJobs);
+  }, [savedJobs]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
@@ -134,10 +151,16 @@ const App: React.FC = () => {
     setNextBatch(null); 
     setSelectedCompanyId(null);
     
+    // MAPPING ARGS TO PARAMS
+    // Discovery: p1=Industry, p2=City
+    // Jobs: p1=Role, p2=City
+    // Lookup: p1=CompanyName, p2=City
+    
     const params: SearchParams = {
         mode,
         industry: mode === 'discovery' ? p1 : undefined,
         city: p2,
+        role: mode === 'jobs' ? p1 : undefined,
         companyName: mode === 'lookup' ? p1 : undefined,
         excludeNames: savedCompanies.map(c => c.name)
     };
@@ -179,198 +202,4 @@ const App: React.FC = () => {
         
         setSearchResults(prev => {
             const updated = [...prev, ...batchLeads];
-            prefetchNextBatch(updated, currentSearchParamsRef.current!); 
-            return updated;
-        });
-        setSearchSources(prev => {
-            // Merge and dedupe sources
-            const combined = [...prev, ...batchSources];
-            return combined.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
-        });
-        return;
-    }
-
-    // Fallback
-    setIsSearching(true);
-    try {
-      const excludeNames = [...searchResults.map(c => c.name), ...savedCompanies.map(c => c.name)];
-      const params: SearchParams = { ...currentSearchParamsRef.current, excludeNames };
-      
-      const { leads, sources } = await findLeads(params, abortControllerRef.current?.signal);
-      
-      if (leads.length === 0) {
-        addToast("No more unique leads found in this area.", "info");
-      } else {
-        setSearchResults(prev => {
-            const updated = [...prev, ...leads];
-            prefetchNextBatch(updated, currentSearchParamsRef.current!);
-            return updated;
-        });
-        setSearchSources(prev => {
-             const combined = [...prev, ...sources];
-             return combined.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
-        });
-      }
-    } catch (error: any) {
-       if (error.name !== 'AbortError') {
-          addToast(error.message || "Failed to load more leads.", "error");
-       }
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const toggleSaveCompany = (company: Company) => {
-    if (savedCompanies.some(c => c.id === company.id)) {
-        // Remove
-        setSavedCompanies(prev => prev.filter(c => c.id !== company.id));
-        addToast("Company removed from saved list", "info");
-    } else {
-        // Add
-        const newCompany = { ...company, status: 'Saved' as const };
-        setSavedCompanies(prev => [newCompany, ...prev]);
-        addToast("Company saved successfully", "success");
-    }
-  };
-
-  const removeMultipleSavedCompanies = (ids: string[]) => {
-    setSavedCompanies(prev => prev.filter(c => !ids.includes(c.id)));
-    if (selectedCompanyId && ids.includes(selectedCompanyId)) {
-        setSelectedCompanyId(null);
-    }
-    addToast(`Deleted ${ids.length} companies`, "info");
-  };
-
-  const selectedCompany = 
-    searchResults.find(c => c.id === selectedCompanyId) || 
-    savedCompanies.find(c => c.id === selectedCompanyId) || 
-    null;
-
-  return (
-    <div 
-      onMouseMove={handleMouseMove}
-      className="h-screen bg-neutral-50 dark:bg-neutral-950 transition-colors duration-400 overflow-hidden flex flex-col relative"
-    >
-      {/* Voice Mode Overlay */}
-      <VoiceMode 
-        isActive={isVoiceModeActive} 
-        onClose={() => setIsVoiceModeActive(false)} 
-        contextCompany={selectedCompany} 
-      />
-
-      {/* Floating Action Button for Voice - High Z-Index to Ensure Visibility */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end space-y-4 pointer-events-none">
-         {/* Toast Area */}
-         <div className="flex flex-col gap-2 pointer-events-auto items-end">
-            {toasts.map(toast => (
-                <Toast key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
-            ))}
-         </div>
-
-         {/* FAB */}
-         <button
-            onClick={() => setIsVoiceModeActive(true)}
-            className="pointer-events-auto group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-accent to-accent-glow text-white shadow-lg shadow-accent/40 hover:scale-110 hover:shadow-accent/60 transition-all duration-300 ease-out"
-            aria-label="Start Voice Assistant"
-         >
-            <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 animate-ping duration-1000"></div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-accent to-accent-glow opacity-80 blur-md"></div>
-            <Mic className="w-6 h-6 relative z-10 drop-shadow-sm" />
-         </button>
-      </div>
-
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className={`absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full blur-[120px] transition-opacity duration-1000 ${isDarkMode ? 'bg-accent/5' : 'bg-accent/10'}`}></div>
-        <div className="absolute inset-0 spotlight-bg opacity-100 transition-opacity duration-500"></div>
-      </div>
-
-      <div className="relative z-10 flex flex-col h-full">
-        <Header 
-            isDarkMode={isDarkMode} 
-            toggleTheme={toggleTheme} 
-            onVoiceToggle={() => setIsVoiceModeActive(true)}
-        />
-
-        <main className="flex-1 w-full max-w-screen-2xl mx-auto flex overflow-hidden">
-          
-          <div className="hidden lg:block w-72 h-full shrink-0">
-             <Sidebar 
-                savedCompanies={savedCompanies}
-                onSelectCompany={(c) => setSelectedCompanyId(c.id)}
-                selectedCompanyId={selectedCompanyId}
-                onRemoveCompanies={removeMultipleSavedCompanies}
-             />
-          </div>
-
-           {showMobileSidebar && (
-              <div className="fixed inset-0 z-50 lg:hidden flex">
-                  <div className="w-72 h-full bg-neutral-900 shadow-2xl animate-fade-in">
-                     <Sidebar 
-                        savedCompanies={savedCompanies}
-                        onSelectCompany={(c) => { setSelectedCompanyId(c.id); setShowMobileSidebar(false); }}
-                        selectedCompanyId={selectedCompanyId}
-                        onRemoveCompanies={removeMultipleSavedCompanies}
-                     />
-                  </div>
-                  <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={() => setShowMobileSidebar(false)}></div>
-              </div>
-           )}
-
-          <div className="flex-1 flex flex-col lg:flex-row min-w-0">
-            
-            <div className="lg:hidden p-2 border-b border-neutral-200 dark:border-white/10 flex items-center justify-between bg-neutral-100/50 dark:bg-neutral-900/50">
-               <button onClick={() => setShowMobileSidebar(true)} className="flex items-center gap-2 text-xs font-bold uppercase text-neutral-500">
-                  <Menu className="w-4 h-4" /> Open Saved List
-               </button>
-               <span className="text-[10px] text-accent font-mono">{savedCompanies.length} SAVED</span>
-            </div>
-
-            <div className={`
-                flex-1 flex flex-col h-full min-w-0 border-r border-neutral-200 dark:border-white/5 bg-white/30 dark:bg-neutral-950/30
-                ${selectedCompanyId ? 'hidden lg:flex' : 'flex'} 
-            `}>
-              <div className="p-4 h-full">
-                <SearchPane 
-                    companies={searchResults} 
-                    sources={searchSources}
-                    selectedCompanyId={selectedCompanyId}
-                    onSelectCompany={setSelectedCompanyId}
-                    onSearch={handleSearch}
-                    onLoadMore={handleLoadMore}
-                    isSearching={isSearching}
-                />
-              </div>
-            </div>
-
-            <div className={`
-                lg:w-[600px] xl:w-[700px] h-full flex-col bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md
-                ${selectedCompanyId ? 'flex fixed inset-0 z-40 lg:static lg:z-auto' : 'hidden lg:flex'}
-            `}>
-               {selectedCompanyId && (
-                  <div className="lg:hidden p-4 border-b border-neutral-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-neutral-900">
-                      <button 
-                          onClick={() => setSelectedCompanyId(null)}
-                          className="text-sm font-medium text-neutral-500 flex items-center gap-2"
-                      >
-                          <ChevronRight className="w-4 h-4 rotate-180" /> Back
-                      </button>
-                  </div>
-               )}
-               
-               <div className="flex-1 h-full overflow-hidden p-4">
-                  <IntelligencePane 
-                      company={selectedCompany} 
-                      onToggleSave={() => selectedCompany && toggleSaveCompany(selectedCompany)}
-                      isSaved={!!selectedCompany && savedCompanies.some(c => c.id === selectedCompany.id)}
-                  />
-               </div>
-            </div>
-
-          </div>
-        </main>
-      </div>
-    </div>
-  );
-};
-
-export default App;
+            prefetchNext

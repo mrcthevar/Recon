@@ -5,6 +5,22 @@ interface Env {
   API_KEY: string;
 }
 
+// Utility to clean LLM output (strip markdown) before parsing
+const cleanAndParseJSON = (text: string) => {
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+        // Simple extraction of first { to last }
+        const start = cleaned.indexOf('{');
+        const end = cleaned.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+            return JSON.parse(cleaned.substring(start, end + 1));
+        }
+        throw e;
+    }
+};
+
 export const onRequestPost = async (context: any) => {
   try {
     if (typeof process === 'undefined') {
@@ -21,12 +37,14 @@ export const onRequestPost = async (context: any) => {
       });
     }
 
-    const { mode, industry, city, companyName, excludeNames } = await request.json();
+    const { mode, industry, city, companyName, excludeNames, role } = await request.json();
 
     if (mode === 'lookup') {
         if (!companyName) return new Response(JSON.stringify({ error: "Company Name is required for lookup" }), { status: 400 });
-    } else {
+    } else if (mode === 'discovery') {
         if (!industry || !city) return new Response(JSON.stringify({ error: "Industry and City are required" }), { status: 400 });
+    } else if (mode === 'jobs') {
+        if (!role || !city) return new Response(JSON.stringify({ error: "Role and City are required" }), { status: 400 });
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -36,29 +54,32 @@ export const onRequestPost = async (context: any) => {
     const today = new Date().toDateString();
 
     const systemInstruction = `
-      You are an expert Lead Generation AI agent.
+      You are an expert Lead Generation & Recruitment Intelligence AI.
       CURRENT DATE: ${today}.
       
-      CORE DIRECTIVE: Prioritize finding CONTACT INFORMATION (Phone, Email, Social Links) and FRESH INTELLIGENCE.
+      CORE DIRECTIVE: Prioritize finding CONTACT INFORMATION, OPEN ROLES, and FRESH INTELLIGENCE.
       
       SEARCH RULES:
-      1. Use the googleSearch tool to find the company website, linkedin, and contact pages.
-      2. FOR 'recentWork' AND 'signals': You MUST use Google Search to find data from the last 6 months. DO NOT use internal training data for news.
-      3. TIME CHECK: Compare found dates with CURRENT DATE (${today}). If an event happened in the past, do NOT label it "upcoming".
-      4. If a direct email is missing, look for generic ones (info@, hello@).
-      5. Do not return "N/A" unless you have verified it does not exist.
-      6. Ensure all URLs are full and valid (https://).
+      1. Use the googleSearch tool to find the company website, careers page, linkedin, and contact pages.
+      2. FOR 'recentWork', 'signals', and 'openRoles': You MUST use Google Search to find data from the last 30 days.
+      3. IF MODE IS 'jobs': Look specifically for open job listings matching the user's requested role.
+      4. TIME CHECK: Compare found dates with CURRENT DATE (${today}). Discard any job listings older than 30 days.
+      5. Ensure all URLs are full and valid (https://).
     `;
 
     let prompt = '';
     if (mode === 'lookup') {
-        prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details. 
-        CRITICAL: Search for the absolute latest news, projects, or financial reports relative to ${today}. 
-        populate 'recentWork' and 'signals' with these real-time findings.`;
+        prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details and checking for any open roles related to creative, tech, or marketing.
+        CRITICAL: Search for the absolute latest news relative to ${today}.`;
+    } else if (mode === 'jobs') {
+        prompt = `Find 5 ACTIVE companies in ${city} that have posted job listings for "${role}" in the LAST 30 DAYS.
+        Exclude: ${exclusionList}.
+        For each company, list specific open roles matching "${role}" (include title, estimated salary, and a direct link to the listing if found).
+        Also find their general contact info and hiring culture.`;
     } else {
         prompt = `Find 5 ACTIVE ${industry} companies in ${city}. Exclude: ${exclusionList}. 
         For every lead, find specific contact info. 
-        CRITICAL: Search for their latest activities relative to ${today} for the 'recentWork' field.`;
+        CRITICAL: Search for their latest activities relative to ${today}.`;
     }
 
     // Strict Schema Definition
@@ -83,6 +104,20 @@ export const onRequestPost = async (context: any) => {
               email: { type: Type.STRING },
               socials: { type: Type.STRING, description: "Space separated full URLs" },
               hotScore: { type: Type.INTEGER },
+              hiringCulture: { type: Type.STRING, description: "Brief notes on their culture or hiring process" },
+              openRoles: {
+                type: Type.ARRAY,
+                items: {
+                   type: Type.OBJECT,
+                   properties: {
+                      title: { type: Type.STRING },
+                      location: { type: Type.STRING },
+                      type: { type: Type.STRING },
+                      salary: { type: Type.STRING },
+                      link: { type: Type.STRING }
+                   }
+                }
+              },
               signals: {
                 type: Type.ARRAY,
                 items: {
@@ -115,12 +150,11 @@ export const onRequestPost = async (context: any) => {
       },
     });
 
-    // With responseSchema, response.text is guaranteed to be valid JSON structure
     let data;
     try {
-        data = JSON.parse(response.text || "{}");
+        // Robust parsing using the utility function
+        data = cleanAndParseJSON(response.text || "{}");
     } catch (e) {
-        // Fallback for extremely rare edge cases
         console.error("JSON Parse Error:", response.text);
         throw new Error("Invalid JSON response from AI");
     }
@@ -135,10 +169,14 @@ export const onRequestPost = async (context: any) => {
         email: lead.email || "N/A",
         socials: lead.socials || "N/A",
         signals: lead.signals || [],
-        location: lead.location || city
+        location: lead.location || city,
+        openRoles: (lead.openRoles || []).map((r: any, ri: number) => ({
+            ...r,
+            id: `role-${Date.now()}-${index}-${ri}`,
+            status: 'Saved'
+        }))
     }));
 
-    // Extract Grounding Chunks (Sources)
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const sources = groundingChunks
         .map((chunk: any) => ({
@@ -161,4 +199,3 @@ export const onRequestPost = async (context: any) => {
     });
   }
 };
-    
