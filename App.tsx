@@ -55,10 +55,22 @@ const App: React.FC = () => {
   // Voice Mode State
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
 
-  // State for Live Results vs Saved Targets
-  const [searchResults, setSearchResults] = useState<Company[]>([]);
-  const [searchSources, setSearchSources] = useState<Source[]>([]);
+  // --- NEW: State for Tabs/Modes Data Caching ---
+  const [activeSearchMode, setActiveSearchMode] = useState<SearchMode>('discovery');
+
+  const [resultsCache, setResultsCache] = useState<Record<SearchMode, { leads: Company[], sources: Source[] }>>({
+    discovery: { leads: [], sources: [] },
+    jobs: { leads: [], sources: [] },
+    lookup: { leads: [], sources: [] }
+  });
   
+  // Cache for params to support "Load More" on each tab independently
+  const searchParamsCacheRef = useRef<Record<SearchMode, SearchParams | null>>({
+    discovery: null,
+    jobs: null,
+    lookup: null
+  });
+
   const [savedCompanies, setSavedCompanies] = useState<Company[]>(() => 
     safeStorage.get<Company[]>('recon_saved_targets', [])
   );
@@ -74,8 +86,6 @@ const App: React.FC = () => {
 
   const [isSearching, setIsSearching] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  
-  const currentSearchParamsRef = useRef<SearchParams | null>(null);
   
   // Abort Controller Ref to handle cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -146,15 +156,15 @@ const App: React.FC = () => {
     abortControllerRef.current = new AbortController();
 
     setIsSearching(true);
-    setSearchResults([]); 
-    setSearchSources([]);
+    // Clear data for this specific mode only
+    setResultsCache(prev => ({
+        ...prev,
+        [mode]: { leads: [], sources: [] }
+    }));
     setNextBatch(null); 
-    setSelectedCompanyId(null);
     
-    // MAPPING ARGS TO PARAMS
-    // Discovery: p1=Industry, p2=City
-    // Jobs: p1=Role, p2=City
-    // Lookup: p1=CompanyName, p2=City
+    // Note: We do not clear selectedCompanyId here to keep context if switching, 
+    // but if the new list doesn't have it, it will naturally disappear from view/selection logic below.
     
     const params: SearchParams = {
         mode,
@@ -164,12 +174,17 @@ const App: React.FC = () => {
         companyName: mode === 'lookup' ? p1 : undefined,
         excludeNames: savedCompanies.map(c => c.name)
     };
-    currentSearchParamsRef.current = params;
+    
+    // Cache params for this mode
+    searchParamsCacheRef.current[mode] = params;
 
     try {
       const { leads, sources } = await findLeads(params, abortControllerRef.current.signal);
-      setSearchResults(leads);
-      setSearchSources(sources);
+      
+      setResultsCache(prev => ({
+        ...prev,
+        [mode]: { leads, sources }
+      }));
       
       if (leads.length === 0) {
         addToast("No leads found. Try a broader search.", "info");
@@ -191,7 +206,8 @@ const App: React.FC = () => {
   };
 
   const handleLoadMore = async () => {
-    if (!currentSearchParamsRef.current || currentSearchParamsRef.current.mode === 'lookup') return;
+    const currentParams = searchParamsCacheRef.current[activeSearchMode];
+    if (!currentParams || currentParams.mode === 'lookup') return;
     
     // STRATEGY: Instant Load if buffer is ready
     if (nextBatch && nextBatch.leads.length > 0) {
@@ -200,15 +216,21 @@ const App: React.FC = () => {
         
         setNextBatch(null); // Clear buffer immediately
         
-        setSearchResults(prev => {
-            const updated = [...prev, ...batchLeads];
-            prefetchNextBatch(updated, currentSearchParamsRef.current!); 
-            return updated;
-        });
-        setSearchSources(prev => {
-            // Merge and dedupe sources
-            const combined = [...prev, ...batchSources];
-            return combined.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
+        setResultsCache(prev => {
+            const currentModeData = prev[activeSearchMode];
+            const updatedLeads = [...currentModeData.leads, ...batchLeads];
+            
+            // Trigger next prefetch
+            prefetchNextBatch(updatedLeads, currentParams);
+            
+            // Dedupe sources
+            const combinedSources = [...currentModeData.sources, ...batchSources];
+            const uniqueSources = combinedSources.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
+
+            return {
+                ...prev,
+                [activeSearchMode]: { leads: updatedLeads, sources: uniqueSources }
+            };
         });
         return;
     }
@@ -216,22 +238,28 @@ const App: React.FC = () => {
     // Fallback
     setIsSearching(true);
     try {
-      const excludeNames = [...searchResults.map(c => c.name), ...savedCompanies.map(c => c.name)];
-      const params: SearchParams = { ...currentSearchParamsRef.current, excludeNames };
+      const currentLeads = resultsCache[activeSearchMode].leads;
+      const excludeNames = [...currentLeads.map(c => c.name), ...savedCompanies.map(c => c.name)];
+      const params: SearchParams = { ...currentParams, excludeNames };
       
       const { leads, sources } = await findLeads(params, abortControllerRef.current?.signal);
       
       if (leads.length === 0) {
         addToast("No more unique leads found in this area.", "info");
       } else {
-        setSearchResults(prev => {
-            const updated = [...prev, ...leads];
-            prefetchNextBatch(updated, currentSearchParamsRef.current!);
-            return updated;
-        });
-        setSearchSources(prev => {
-             const combined = [...prev, ...sources];
-             return combined.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
+         setResultsCache(prev => {
+            const currentModeData = prev[activeSearchMode];
+            const updatedLeads = [...currentModeData.leads, ...leads];
+            
+            prefetchNextBatch(updatedLeads, currentParams);
+            
+            const combinedSources = [...currentModeData.sources, ...sources];
+            const uniqueSources = combinedSources.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
+
+            return {
+                ...prev,
+                [activeSearchMode]: { leads: updatedLeads, sources: uniqueSources }
+            };
         });
       }
     } catch (error: any) {
@@ -270,8 +298,7 @@ const App: React.FC = () => {
       };
       setSavedJobs(prev => [newJob, ...prev]);
       
-      // Auto-save company if not saved? Let's leave them separate but user likely wants company saved too.
-      // Optionally toggleSaveCompany(company) if not present.
+      // Auto-save company if not saved
       if (!savedCompanies.some(c => c.id === company.id)) {
           toggleSaveCompany(company);
       }
@@ -296,8 +323,12 @@ const App: React.FC = () => {
     addToast(`Deleted ${ids.length} companies`, "info");
   };
 
+  // Determine current dataset based on active mode
+  const currentLeads = resultsCache[activeSearchMode].leads;
+  const currentSources = resultsCache[activeSearchMode].sources;
+
   const selectedCompany = 
-    searchResults.find(c => c.id === selectedCompanyId) || 
+    currentLeads.find(c => c.id === selectedCompanyId) || 
     savedCompanies.find(c => c.id === selectedCompanyId) || 
     null;
 
@@ -400,13 +431,15 @@ const App: React.FC = () => {
             `}>
               <div className="p-4 h-full">
                 <SearchPane 
-                    companies={searchResults} 
-                    sources={searchSources}
+                    companies={currentLeads} 
+                    sources={currentSources}
                     selectedCompanyId={selectedCompanyId}
                     onSelectCompany={setSelectedCompanyId}
                     onSearch={handleSearch}
                     onLoadMore={handleLoadMore}
                     isSearching={isSearching}
+                    activeMode={activeSearchMode}
+                    onModeChange={setActiveSearchMode}
                 />
               </div>
             </div>

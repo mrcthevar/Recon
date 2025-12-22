@@ -1,7 +1,7 @@
 
 
 import React, { useState } from 'react';
-import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase, UserPlus, Search, FileText, UserSearch, Briefcase as BriefcaseIcon, PlusCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import { Target, Send, Loader2, Sparkles, Copy, Check, Bot, Phone, Mail, Award, Globe, Linkedin, Twitter, Facebook, Instagram, Youtube, Link as LinkIcon, Zap, TrendingUp, DollarSign, Newspaper, Edit3, Bookmark, ShieldCheck, MapPin, Briefcase, UserPlus, Search, FileText, UserSearch, Briefcase as BriefcaseIcon, PlusCircle, CheckCircle, ExternalLink, Building2 } from 'lucide-react';
 import { Company, Pitch, Job, SavedJob } from '../types';
 import { generatePitch } from '../services/geminiService';
 
@@ -140,28 +140,28 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                         <Search className="w-4 h-4 text-blue-500" />
                     </div>
                     <div>
-                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">1. Discover</h4>
-                        <p className="text-xs text-neutral-500 mt-1">Search by Industry, City or Role (e.g., "Copywriter in Mumbai") to find leads.</p>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">1. Lead Discovery</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Search by Industry and City to identify high-value targets with active needs.</p>
                     </div>
                 </div>
                 
                  <div className="flex items-start gap-4 p-4 bg-white dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-white/5 shadow-sm">
                     <div className="mt-1 p-1.5 bg-purple-500/10 rounded-lg">
-                        <FileText className="w-4 h-4 text-purple-500" />
+                        <UserSearch className="w-4 h-4 text-purple-500" />
                     </div>
                     <div>
-                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">2. Analyze & Track Jobs</h4>
-                        <p className="text-xs text-neutral-500 mt-1">View open roles, verified contact info, and track your application pipeline.</p>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">2. Job Market Search</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Identify open roles, salary data, and hiring culture for specific positions.</p>
                     </div>
                 </div>
 
                  <div className="flex items-start gap-4 p-4 bg-white dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-white/5 shadow-sm">
-                    <div className="mt-1 p-1.5 bg-green-500/10 rounded-lg">
-                        <Send className="w-4 h-4 text-green-500" />
+                    <div className="mt-1 p-1.5 bg-orange-500/10 rounded-lg">
+                        <Building2 className="w-4 h-4 text-orange-500" />
                     </div>
                     <div>
-                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">3. Outreach</h4>
-                        <p className="text-xs text-neutral-500 mt-1">Generate AI-personalized emails or job applications tailored to the company.</p>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">3. Target Lookup</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Deep dive into a specific company to uncover verified contact info and signals.</p>
                     </div>
                 </div>
             </div>

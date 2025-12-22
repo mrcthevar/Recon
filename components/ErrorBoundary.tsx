@@ -63,6 +63,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    // Fix: Cast this to any to access props if TypeScript fails to infer properties from Component class
+    return (this as any).props.children;
   }
 }

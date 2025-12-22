@@ -1,7 +1,6 @@
 
-
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, X, Activity, Volume2, Globe, Wifi } from 'lucide-react';
+import { Mic, X, Activity, Volume2, Globe, Wifi, AlertTriangle } from 'lucide-react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { Company } from '../types';
 
@@ -13,13 +12,14 @@ interface VoiceModeProps {
 
 export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, contextCompany }) => {
   const [status, setStatus] = useState<'connecting' | 'listening' | 'speaking' | 'error'>('connecting');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [volumeLevel, setVolumeLevel] = useState(0);
   
   // Refs for Audio Handling
   const inputContextRef = useRef<AudioContext | null>(null);
   const outputContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
@@ -97,10 +97,11 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
 
       try {
         setStatus('connecting');
+        setErrorMessage(null);
         ensureAudioContexts();
 
         const apiKey = (window as any).process?.env?.API_KEY || process.env.API_KEY; 
-        if (!apiKey) throw new Error("No API Key");
+        if (!apiKey) throw new Error("API Key is missing. Check .env configuration.");
 
         const ai = new GoogleGenAI({ apiKey });
 
@@ -129,30 +130,50 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
               setStatus('listening');
 
               // Start Microphone with Echo Cancellation
-              mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ 
-                  audio: {
-                      echoCancellation: true,
-                      noiseSuppression: true,
-                      autoGainControl: true,
-                      sampleRate: 16000 
-                  }
-              });
+              try {
+                mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 16000 
+                    }
+                });
+              } catch (e) {
+                console.error("Microphone access failed", e);
+                setErrorMessage("Microphone access denied.");
+                setStatus('error');
+                return;
+              }
               
               if (!inputContextRef.current) return;
-              
               const inputCtx = inputContextRef.current;
+
+              // Load AudioWorklet Module
+              try {
+                 await inputCtx.audioWorklet.addModule('/pcm-processor.js');
+              } catch (e) {
+                 console.error("Failed to load AudioWorklet", e);
+                 setErrorMessage("Audio module failed to load.");
+                 setStatus('error');
+                 return;
+              }
+
               sourceNodeRef.current = inputCtx.createMediaStreamSource(mediaStreamRef.current);
-              // Reduced buffer size to 2048 for lower latency (approx 128ms)
-              processorRef.current = inputCtx.createScriptProcessor(2048, 1, 1);
+              workletNodeRef.current = new AudioWorkletNode(inputCtx, 'pcm-processor');
               
-              processorRef.current.onaudioprocess = (e) => {
+              workletNodeRef.current.port.onmessage = (e) => {
                 if (!mounted) return;
-                const inputData = e.inputBuffer.getChannelData(0);
+                const inputData = e.data as Float32Array; // Float32Array from Worklet
                 
-                // Visualization
+                // Visualization (RMS Calculation)
                 let sum = 0;
-                for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
-                const rms = Math.sqrt(sum / inputData.length);
+                // Sample a subset for performance if buffer is large, or use all
+                const sampleStep = Math.ceil(inputData.length / 100); 
+                for (let i = 0; i < inputData.length; i += sampleStep) {
+                    sum += inputData[i] * inputData[i];
+                }
+                const rms = Math.sqrt(sum / (inputData.length / sampleStep));
                 setVolumeLevel(Math.min(1, rms * 5)); 
 
                 // Send to Gemini
@@ -167,8 +188,8 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
                 });
               };
 
-              sourceNodeRef.current.connect(processorRef.current);
-              processorRef.current.connect(inputCtx.destination);
+              sourceNodeRef.current.connect(workletNodeRef.current);
+              workletNodeRef.current.connect(inputCtx.destination);
               
               if (contextCompany) {
                  const initialContext = `User is analyzing: ${contextCompany.name} (${contextCompany.industry}). 
@@ -223,13 +244,17 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
             },
             onerror: (err) => {
               console.error("Recon Live Error:", err);
-              if (mounted) setStatus('error');
+              if (mounted) {
+                  setErrorMessage("Connection to Gemini failed.");
+                  setStatus('error');
+              }
             }
           }
         });
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Setup Error", err);
+        setErrorMessage(err.message || "Failed to initialize voice session.");
         setStatus('error');
       }
     };
@@ -246,8 +271,8 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach(t => t.stop());
       }
-      if (processorRef.current && sourceNodeRef.current) {
-        processorRef.current.disconnect();
+      if (workletNodeRef.current && sourceNodeRef.current) {
+        workletNodeRef.current.disconnect();
         sourceNodeRef.current.disconnect();
       }
       if (inputContextRef.current) {
@@ -295,7 +320,7 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
             <div className="absolute top-5 left-6 flex items-center gap-2">
                  <div className={`w-2 h-2 rounded-full ${status === 'error' ? 'bg-red-500' : (status === 'connecting' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')}`}></div>
                  <span className="text-[10px] font-mono text-neutral-500 uppercase">
-                    {status === 'connecting' ? 'SYNCING' : 'LIVE'}
+                    {status === 'connecting' ? 'SYNCING' : (status === 'error' ? 'OFFLINE' : 'LIVE')}
                  </span>
             </div>
 
@@ -329,7 +354,7 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
                     {status === 'connecting' && <Activity className="w-8 h-8 animate-pulse" />}
                     {status === 'listening' && <div className={`w-3 h-3 rounded-full bg-red-500 animate-pulse transition-all ${volumeLevel > 0.1 ? 'scale-150' : ''}`} />}
                     {status === 'speaking' && <Volume2 className="w-8 h-8 animate-bounce" />}
-                    {status === 'error' && <X className="w-8 h-8" />}
+                    {status === 'error' && <AlertTriangle className="w-8 h-8 text-red-500" />}
                 </div>
             </div>
 
@@ -338,12 +363,15 @@ export const VoiceMode: React.FC<VoiceModeProps> = ({ isActive, onClose, context
                 {status === 'connecting' && "Connecting..."}
                 {status === 'listening' && "Listening"}
                 {status === 'speaking' && "Recon AI"}
-                {status === 'error' && "Connection Error"}
+                {status === 'error' && "System Error"}
             </h3>
             
             <p className="text-xs font-mono text-neutral-500 text-center max-w-[240px] leading-relaxed">
-                {status === 'error' ? "Microphone access denied or connection dropped." : 
-                 contextCompany ? `Analyzing ${contextCompany.name}. Ask for open roles or contact info.` : "I'm listening. Ask me to find jobs, leads, or analyze companies."}
+                {errorMessage ? (
+                    <span className="text-red-400">{errorMessage}</span>
+                ) : (
+                    contextCompany ? `Analyzing ${contextCompany.name}. Ask for open roles or contact info.` : "I'm listening. Ask me to find jobs, leads, or analyze companies."
+                )}
             </p>
 
             {/* Dynamic Waveform */}
