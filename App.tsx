@@ -175,21 +175,67 @@ const App: React.FC = () => {
         excludeNames: savedCompanies.map(c => c.name)
     };
     
-    // Cache params for this mode
+    // Cache params for this mode (using original p2 string to support Load More context)
     searchParamsCacheRef.current[mode] = params;
 
     try {
-      const { leads, sources } = await findLeads(params, abortControllerRef.current.signal);
+      // Logic for multi-city search (only for Discovery and Jobs)
+      // Check if p2 contains commas
+      const cities = p2.split(',').map(c => c.trim()).filter(c => c.length > 0);
+      let combinedLeads: Company[] = [];
+      let combinedSources: Source[] = [];
+
+      if (cities.length > 1 && mode !== 'lookup') {
+        // Parallel execution for multiple cities to get a rich initial result set
+        // Limit to 3 cities to avoid rate limits or overwhelming the user
+        const targetCities = cities.slice(0, 3);
+        
+        const promises = targetCities.map(city => {
+            const cityParams = { ...params, city };
+            return findLeads(cityParams, abortControllerRef.current?.signal)
+                .catch(e => {
+                    console.warn(`Search failed for city: ${city}`, e);
+                    return { leads: [], sources: [] };
+                });
+        });
+
+        const results = await Promise.all(promises);
+        
+        results.forEach((res, index) => {
+            // We need to re-generate IDs because parallel execution might create colliding IDs based on Date.now()
+            const remappedLeads = res.leads.map((l, li) => ({
+                ...l, 
+                id: `merged-${index}-${li}-${Date.now()}`
+            }));
+            combinedLeads = [...combinedLeads, ...remappedLeads];
+            combinedSources = [...combinedSources, ...res.sources];
+        });
+
+        // Deduplicate based on name just in case of overlap
+        combinedLeads = combinedLeads.filter((v, i, a) => a.findIndex(t => t.name === v.name) === i);
+        
+        // Deduplicate sources
+        combinedSources = combinedSources.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
+
+      } else {
+        // Standard Single Search
+        const { leads, sources } = await findLeads(params, abortControllerRef.current.signal);
+        combinedLeads = leads;
+        combinedSources = sources;
+      }
       
       setResultsCache(prev => ({
         ...prev,
-        [mode]: { leads, sources }
+        [mode]: { leads: combinedLeads, sources: combinedSources }
       }));
       
-      if (leads.length === 0) {
+      if (combinedLeads.length === 0) {
         addToast("No leads found. Try a broader search.", "info");
       } else {
-        prefetchNextBatch(leads, params);
+        // Only prefetch if single city to keep things simple, or use the combined string for "Load More" logic
+        if (cities.length === 1) {
+            prefetchNextBatch(combinedLeads, params);
+        }
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {

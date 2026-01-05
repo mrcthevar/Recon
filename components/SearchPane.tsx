@@ -184,7 +184,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="City (e.g. London)"
+                    placeholder="City (e.g. London, NYC, Paris)"
                     aria-label="City"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
@@ -218,7 +218,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     type="text"
                     value={jobCity}
                     onChange={(e) => setJobCity(e.target.value)}
-                    placeholder="City (e.g. Mumbai)"
+                    placeholder="City (e.g. SF, Remote, London)"
                     aria-label="City"
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"

@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 interface Env {
@@ -72,12 +73,16 @@ export const onRequestPost = async (context: any) => {
         prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details and checking for any open roles related to creative, tech, or marketing.
         CRITICAL: Search for the absolute latest news relative to ${today}.`;
     } else if (mode === 'jobs') {
-        prompt = `Find 5 ACTIVE companies in ${city} that have posted job listings for "${role}" in the LAST 30 DAYS.
+        prompt = `Find 5 ACTIVE companies in ${city}.
+        If multiple cities are provided in "${city}", find top companies distributed across them.
+        Criteria: Posted job listings for "${role}" in the LAST 30 DAYS.
         Exclude: ${exclusionList}.
         For each company, list specific open roles matching "${role}" (include title, estimated salary, and a direct link to the listing if found).
         Also find their general contact info and hiring culture.`;
     } else {
-        prompt = `Find 5 ACTIVE ${industry} companies in ${city}. Exclude: ${exclusionList}. 
+        prompt = `Find 5 ACTIVE ${industry} companies in ${city}. 
+        If multiple cities are provided in "${city}", find top companies distributed across them.
+        Exclude: ${exclusionList}. 
         For every lead, find specific contact info. 
         CRITICAL: Search for their latest activities relative to ${today}.`;
     }
