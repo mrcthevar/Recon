@@ -58,16 +58,14 @@ export const onRequestPost = async (context: any) => {
       You are an expert Lead Generation & Recruitment Intelligence AI.
       CURRENT DATE: ${today}.
       
-      HALLUCINATION ZERO-TOLERANCE POLICY:
-      1. JOB TITLES MUST BE VERBATIM: You must extract the EXACT text of the job title from the search result snippet.
-      2. DO NOT NORMALIZE: If the user searches for "SAS Programmer" but the website says "Data Manager", output "Data Manager".
-      3. DO NOT INVENT: Do not create "Intern" or "Junior" roles unless the text explicitly says "Intern" or "Junior".
-      4. EVIDENCE REQUIRED: If you cannot find a specific job listing URL active in the last 30 days, do not list that role.
+      ACCURACY PROTOCOL:
+      1. JOB TITLES: Prefer VERBATIM extraction. However, if a specific role isn't found but the company is a strong match, you may list "General Application" or "Open Talent Network".
+      2. URLS: You MUST find a valid URL. If a specific job post URL is unavailable (e.g. behind a login or SPA), use the main Careers Page URL.
+      3. INTEGRITY: Do not invent salary numbers. Use "Not Disclosed" if missing.
+      4. RELEVANCE: Prioritize companies with activity in the LAST 30 DAYS.
       
-      GENERAL RULES:
-      1. Use the googleSearch tool to find verified data.
-      2. Ensure all URLs are full and valid (https://).
-      3. Discard any job listings older than 30 days.
+      FALLBACK STRATEGY:
+      If you find a perfect company for the user's industry but cannot verify a *specific* open role, you SHOULD still return the company as a lead, but mark the openRole title as "Unverified" or "See Careers Page".
     `;
 
     let prompt = '';
@@ -79,15 +77,15 @@ export const onRequestPost = async (context: any) => {
         
         EXECUTION STEPS:
         1. Search for: "careers at companies in ${city} hiring ${role}".
-        2. Look for specific job board postings or career page snippets from the LAST 30 DAYS.
-        3. Extract the REAL job title found.
+        2. Filter for postings from the LAST 30 DAYS.
+        3. If a specific job link is found, use it.
+        4. If NOT found, but the company is hiring generally, use the main Careers Page.
         
-        STRICT OUTPUT RULES:
-        - If you find a "Manager" role, list "Manager". Do NOT change it to "${role}" to match the user's query.
-        - If a company has no active roles, skip it.
+        OUTPUT RULES:
+        - If the exact role "${role}" is not found, list the closest actual matches.
         - Exclude: ${exclusionList}.
         
-        Return 5 companies with verified, verbatim job titles and direct links.`;
+        Return 5 companies.`;
     } else {
         prompt = `Find 5 ACTIVE ${industry} companies in ${city}. 
         If multiple cities are provided in "${city}", find top companies distributed across them.
@@ -124,7 +122,7 @@ export const onRequestPost = async (context: any) => {
                 items: {
                    type: Type.OBJECT,
                    properties: {
-                      title: { type: Type.STRING, description: "The EXACT title found on the website. Do not rephrase." },
+                      title: { type: Type.STRING, description: "The job title or 'General Application'" },
                       location: { type: Type.STRING },
                       type: { type: Type.STRING },
                       salary: { type: Type.STRING },
@@ -157,7 +155,7 @@ export const onRequestPost = async (context: any) => {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.1, // Reduced for deterministic results
+        temperature: 0.1, // Keep it deterministic
         systemInstruction: systemInstruction,
         responseMimeType: "application/json",
         responseSchema: schema
