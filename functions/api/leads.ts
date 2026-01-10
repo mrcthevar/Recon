@@ -58,27 +58,28 @@ export const onRequestPost = async (context: any) => {
       You are an expert Lead Generation & Recruitment Intelligence AI.
       CURRENT DATE: ${today}.
       
-      CORE DIRECTIVE: Prioritize finding CONTACT INFORMATION, OPEN ROLES, and FRESH INTELLIGENCE.
+      CORE DIRECTIVE: Provide FACTUAL, DETERMINISTIC, and VERIFIED information only. Do not hallucinate.
       
       SEARCH RULES:
       1. Use the googleSearch tool to find the company website, careers page, linkedin, and contact pages.
       2. FOR 'recentWork', 'signals', and 'openRoles': You MUST use Google Search to find data from the last 30 days.
-      3. IF MODE IS 'jobs': Look specifically for open job listings matching the user's requested role.
+      3. IF MODE IS 'jobs': Look specifically for ACTIVE job listings matching the user's requested role. Verify the listing is currently live.
       4. TIME CHECK: Compare found dates with CURRENT DATE (${today}). Discard any job listings older than 30 days.
       5. Ensure all URLs are full and valid (https://).
     `;
 
     let prompt = '';
     if (mode === 'lookup') {
-        prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details and checking for any open roles related to creative, tech, or marketing.
+        prompt = `Target: "${companyName}" in "${city || 'any location'}". Find verified contact details and check for any open roles related to creative, tech, or marketing.
         CRITICAL: Search for the absolute latest news relative to ${today}.`;
     } else if (mode === 'jobs') {
-        prompt = `Find 5 ACTIVE companies in ${city}.
+        prompt = `Find 5 ACTIVE companies in ${city} that are currently hiring for "${role}".
         If multiple cities are provided in "${city}", find top companies distributed across them.
-        Criteria: Posted job listings for "${role}" in the LAST 30 DAYS.
+        Criteria: The company MUST have active job listings for "${role}" posted in the LAST 30 DAYS.
         Exclude: ${exclusionList}.
         For each company, list specific open roles matching "${role}" (include title, estimated salary, and a direct link to the listing if found).
-        Also find their general contact info and hiring culture.`;
+        Also find their general contact info and hiring culture.
+        If a company does not have an active role for "${role}", do not include it.`;
     } else {
         prompt = `Find 5 ACTIVE ${industry} companies in ${city}. 
         If multiple cities are provided in "${city}", find top companies distributed across them.
@@ -148,7 +149,7 @@ export const onRequestPost = async (context: any) => {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.4,
+        temperature: 0.1, // Reduced for deterministic results
         systemInstruction: systemInstruction,
         responseMimeType: "application/json",
         responseSchema: schema
