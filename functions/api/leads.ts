@@ -46,6 +46,8 @@ export const onRequestPost = async (context: any) => {
         if (!industry || !city) return new Response(JSON.stringify({ error: "Industry and City are required" }), { status: 400 });
     } else if (mode === 'jobs') {
         if (!role || !city) return new Response(JSON.stringify({ error: "Role and City are required" }), { status: 400 });
+    } else if (mode === 'people') {
+        if (!role || !city) return new Response(JSON.stringify({ error: "Role and City are required" }), { status: 400 });
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -86,6 +88,21 @@ export const onRequestPost = async (context: any) => {
         - Exclude: ${exclusionList}.
         
         Return 5 companies.`;
+    } else if (mode === 'people') {
+        prompt = `GOAL: Find 5 active professionals/freelancers in ${city} with the role/title of "${role}".
+        
+        EXECUTION STEPS:
+        1. Search for: "${role} in ${city} portfolio contact".
+        2. Find their specific contact info (email, phone, socials, portfolio).
+        3. Extract their recent work or bio.
+        
+        OUTPUT RULES:
+        - Exclude: ${exclusionList}.
+        - Return 5 people.
+        - Map their name to the 'name' field, their portfolio to 'website', their role to 'industry', their bio to 'description'.
+        - Map their skills to 'needs'.
+        - Map their most notable project or current status to 'heroProduct'.
+        - Map their email to 'email' and phone to 'phone'.`;
     } else {
         prompt = `Find 5 ACTIVE ${industry} companies in ${city}. 
         If multiple cities are provided in "${city}", find top companies distributed across them.

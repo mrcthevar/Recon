@@ -51,6 +51,9 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   const [role, setRole] = useState('');
   const [jobCity, setJobCity] = useState('');
 
+  const [personRole, setPersonRole] = useState('');
+  const [personCity, setPersonCity] = useState('');
+
   const [loadingText, setLoadingText] = useState('Searching...');
   
   // Track if a search has been performed to show correct empty state
@@ -68,6 +71,12 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
         "Checking Career Pages...",
         "Evaluating Hiring Culture...",
         "Compiling Open Roles..."
+    ] : activeMode === 'people' ? [
+        "Scanning Professional Networks...",
+        "Identifying Candidates...",
+        "Extracting Contact Info...",
+        "Reviewing Portfolios...",
+        "Compiling Profiles..."
     ] : [
         "Analyzing Industry...",
         "Finding Companies...",
@@ -115,6 +124,8 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
        if (industry && city) onSearch('discovery', industry, city);
     } else if (activeMode === 'jobs') {
        if (role && jobCity) onSearch('jobs', role, jobCity);
+    } else if (activeMode === 'people') {
+       if (personRole && personCity) onSearch('people', personRole, personCity);
     } else {
        if (companyName) onSearch('lookup', companyName, lookupCity || 'Anywhere'); 
     }
@@ -159,6 +170,14 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${activeMode === 'lookup' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                  >
                     Lookup
+                 </button>
+                 <button
+                    onClick={() => onModeChange('people')}
+                    role="tab"
+                    aria-selected={activeMode === 'people'}
+                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${activeMode === 'people' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                 >
+                    People
                  </button>
              </div>
         </div>
@@ -266,17 +285,52 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
               </>
           )}
 
+          {activeMode === 'people' && (
+              <>
+                 <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <UserSearch className="h-4 w-4 text-neutral-400 group-focus-within:text-accent transition-colors duration-300" />
+                    </div>
+                    <input
+                    type="text"
+                    value={personRole}
+                    onChange={(e) => setPersonRole(e.target.value)}
+                    placeholder="Role (e.g. Cinematographer)"
+                    aria-label="Role"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
+                    />
+                </div>
+                
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-4 w-4 text-neutral-400 group-focus-within:text-accent transition-colors duration-300" />
+                    </div>
+                    <input
+                    type="text"
+                    value={personCity}
+                    onChange={(e) => setPersonCity(e.target.value)}
+                    placeholder="City (e.g. Mumbai, Chennai)"
+                    aria-label="City"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
+                    />
+                </div>
+              </>
+          )}
+
           <button 
             onClick={handleSubmit}
             disabled={
                 isSearching || 
                 (activeMode === 'discovery' ? (!industry || !city) : 
                  activeMode === 'jobs' ? (!role || !jobCity) : 
+                 activeMode === 'people' ? (!personRole || !personCity) :
                  !companyName)
             }
             className={`
               w-full flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all duration-300 shadow-lg 
-              ${isSearching || (activeMode === 'discovery' ? (!industry || !city) : activeMode === 'jobs' ? (!role || !jobCity) : !companyName)
+              ${isSearching || (activeMode === 'discovery' ? (!industry || !city) : activeMode === 'jobs' ? (!role || !jobCity) : activeMode === 'people' ? (!personRole || !personCity) : !companyName)
                 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed shadow-none' 
                 : 'bg-accent hover:bg-accent-glow text-white shadow-accent/20 hover:shadow-accent/40 active:scale-[0.98]'}
             `}
@@ -285,7 +339,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
             {isSearching && companies.length === 0 ? (
                 <span className="font-mono text-xs uppercase tracking-wide animate-pulse">{loadingText}</span>
             ) : (
-                activeMode === 'discovery' ? 'Find Leads' : activeMode === 'jobs' ? 'Find Jobs' : 'Lookup'
+                activeMode === 'discovery' ? 'Find Leads' : activeMode === 'jobs' ? 'Find Jobs' : activeMode === 'people' ? 'Find People' : 'Lookup'
             )}
           </button>
         </div>
@@ -423,7 +477,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                 );
                 })}
                 
-                {companies.length > 0 && (activeMode === 'discovery' || activeMode === 'jobs') && (
+                {companies.length > 0 && (activeMode === 'discovery' || activeMode === 'jobs' || activeMode === 'people') && (
                 <div ref={loadMoreRef} className="py-4 flex flex-col items-center justify-center opacity-70">
                     {isSearching ? (
                         <div className="flex items-center gap-2 text-xs text-neutral-500">

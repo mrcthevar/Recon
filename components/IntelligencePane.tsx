@@ -164,6 +164,16 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
                         <p className="text-xs text-neutral-500 mt-1">Deep dive into a specific company to uncover verified contact info and signals.</p>
                     </div>
                 </div>
+
+                 <div className="flex items-start gap-4 p-4 bg-white dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-white/5 shadow-sm">
+                    <div className="mt-1 p-1.5 bg-emerald-500/10 rounded-lg">
+                        <UserPlus className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">4. People Search</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Find professionals by role and location, complete with contact details and portfolios.</p>
+                    </div>
+                </div>
             </div>
          </div>
       </div>
@@ -262,24 +272,47 @@ export const IntelligencePane: React.FC<IntelligencePaneProps> = ({
         {activeTab === 'overview' && (
             <div className="space-y-6 animate-fade-in">
                 <div className="bg-white dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-200 dark:border-white/5">
-                    <h3 className="text-xs font-bold text-neutral-500 uppercase mb-3">Company Overview</h3>
+                    <h3 className="text-xs font-bold text-neutral-500 uppercase mb-3">Overview</h3>
                     <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
                         {company.description}
                     </p>
                 </div>
 
+                {(company.email !== 'N/A' || company.phone !== 'N/A') && (
+                    <div className="bg-white dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-200 dark:border-white/5">
+                        <div className="flex items-center gap-2 mb-3 text-neutral-500">
+                            <Mail className="w-3 h-3" />
+                            <span className="text-xs font-bold uppercase">Contact Info</span>
+                        </div>
+                        <div className="space-y-2">
+                            {company.email !== 'N/A' && (
+                                <div className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                                    <Mail className="w-4 h-4 text-neutral-400" />
+                                    <a href={`mailto:${company.email}`} className="hover:text-accent hover:underline">{company.email}</a>
+                                </div>
+                            )}
+                            {company.phone !== 'N/A' && (
+                                <div className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                                    <Phone className="w-4 h-4 text-neutral-400" />
+                                    <a href={`tel:${company.phone}`} className="hover:text-accent hover:underline">{company.phone}</a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-200 dark:border-white/5">
                         <div className="flex items-center gap-2 mb-2 text-neutral-500">
                             <Award className="w-3 h-3" />
-                            <span className="text-xs font-bold uppercase">Hero Product</span>
+                            <span className="text-xs font-bold uppercase">Notable Work / Product</span>
                         </div>
                         <p className="text-sm font-medium text-neutral-900 dark:text-white">{company.heroProduct}</p>
                     </div>
                     <div className="bg-white dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-200 dark:border-white/5">
                          <div className="flex items-center gap-2 mb-2 text-neutral-500">
                             <Target className="w-3 h-3" />
-                            <span className="text-xs font-bold uppercase">Identified Needs</span>
+                            <span className="text-xs font-bold uppercase">Needs / Skills</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {company.needs.map((need, i) => (
