@@ -70,7 +70,7 @@ export interface PitchParams {
   jobTitle?: string; // Specific job context
 }
 
-export type SearchMode = 'discovery' | 'lookup' | 'jobs';
+export type SearchMode = 'discovery' | 'lookup' | 'jobs' | 'people';
 
 export interface SearchParams {
   mode: SearchMode;

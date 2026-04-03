@@ -1,9 +1,9 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="antialiased">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Recon | Lead Gen Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -53,23 +53,29 @@
       }
     </script>
     <style>
+      :root {
+        --app-height: 100vh;
+      }
+      
       html, body {
-        height: 100%;
+        height: var(--app-height);
+        height: 100dvh;
         margin: 0;
         padding: 0;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       
       body {
         transition: background-color 0.4s ease, color 0.4s ease;
       }
       
-      /* Glassmorphism utilities */
       .glass-panel {
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
       }
       
-      /* Smooth input autofill fix */
       input:-webkit-autofill,
       input:-webkit-autofill:hover, 
       input:-webkit-autofill:focus, 
@@ -89,7 +95,6 @@
         --autofill-text: #171717;
       }
 
-      /* Custom scrollbar */
       ::-webkit-scrollbar {
         width: 6px;
       }
@@ -104,7 +109,6 @@
         background: #737373;
       }
 
-      /* Dynamic Mouse Glow */
       :root {
         --mouse-x: 50%;
         --mouse-y: 50%;
@@ -140,7 +144,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>

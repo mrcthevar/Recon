@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Building2, Flame, ExternalLink, RefreshCw, UserSearch, DollarSign } from 'lucide-react';
+import { Search, MapPin, Briefcase, ChevronRight, Globe, Loader2, Radar, Building2, Flame, ExternalLink, RefreshCw, UserSearch, DollarSign, AlertCircle } from 'lucide-react';
 import { Company, SearchMode, Source } from '../types';
 
 interface SearchPaneProps {
@@ -40,27 +41,29 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   activeMode,
   onModeChange
 }) => {
-  // Local input state persists even when mode changes (if component doesn't unmount)
-  // Discovery Inputs
+  // Local input state persists even when mode changes
   const [industry, setIndustry] = useState('');
   const [city, setCity] = useState('');
   
-  // Lookup Inputs
   const [companyName, setCompanyName] = useState('');
   const [lookupCity, setLookupCity] = useState('');
 
-  // Jobs Inputs
   const [role, setRole] = useState('');
   const [jobCity, setJobCity] = useState('');
 
-  // Loading Message State
+  const [personRole, setPersonRole] = useState('');
+  const [personCity, setPersonCity] = useState('');
+
   const [loadingText, setLoadingText] = useState('Searching...');
   
-  // Infinite Scroll Ref
+  // Track if a search has been performed to show correct empty state
+  const [hasSearched, setHasSearched] = useState(false);
+  
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isSearching) return;
+    setHasSearched(true);
     
     const messages = activeMode === 'jobs' ? [
         "Scanning Job Boards...",
@@ -68,6 +71,12 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
         "Checking Career Pages...",
         "Evaluating Hiring Culture...",
         "Compiling Open Roles..."
+    ] : activeMode === 'people' ? [
+        "Scanning Professional Networks...",
+        "Identifying Candidates...",
+        "Extracting Contact Info...",
+        "Reviewing Portfolios...",
+        "Compiling Profiles..."
     ] : [
         "Analyzing Industry...",
         "Finding Companies...",
@@ -85,7 +94,6 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
     return () => clearInterval(interval);
   }, [isSearching, activeMode]);
 
-  // Infinite Scroll Observer
   useEffect(() => {
     if (!onLoadMore || activeMode === 'lookup' || isSearching || companies.length === 0) return;
 
@@ -102,6 +110,13 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
     return () => observer.disconnect();
   }, [companies.length, isSearching, activeMode, onLoadMore]);
 
+  // Reset hasSearched when mode changes so we see the "Ready" state again
+  useEffect(() => {
+    if (companies.length === 0) {
+        setHasSearched(false);
+    }
+  }, [activeMode]);
+
   const handleSubmit = () => {
     if (!onSearch) return;
 
@@ -109,6 +124,8 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
        if (industry && city) onSearch('discovery', industry, city);
     } else if (activeMode === 'jobs') {
        if (role && jobCity) onSearch('jobs', role, jobCity);
+    } else if (activeMode === 'people') {
+       if (personRole && personCity) onSearch('people', personRole, personCity);
     } else {
        if (companyName) onSearch('lookup', companyName, lookupCity || 'Anywhere'); 
     }
@@ -123,13 +140,12 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
   return (
     <div className="flex flex-col h-full">
       
-      {/* Search Header Area - Fixed Top */}
+      {/* Search Header Area */}
       <div className="mb-2 space-y-4 relative z-10 bg-neutral-50 dark:bg-neutral-950 pb-2">
         <div className="flex items-center justify-between px-1">
              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
                Search
              </h2>
-             {/* Mode Toggles */}
              <div className="flex p-1 rounded-lg bg-neutral-200 dark:bg-white/5 border border-neutral-200 dark:border-white/5" role="tablist">
                  <button
                     onClick={() => onModeChange('discovery')}
@@ -154,6 +170,14 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${activeMode === 'lookup' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
                  >
                     Lookup
+                 </button>
+                 <button
+                    onClick={() => onModeChange('people')}
+                    role="tab"
+                    aria-selected={activeMode === 'people'}
+                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${activeMode === 'people' ? 'bg-white dark:bg-neutral-800 text-accent shadow-sm' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+                 >
+                    People
                  </button>
              </div>
         </div>
@@ -261,17 +285,52 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
               </>
           )}
 
+          {activeMode === 'people' && (
+              <>
+                 <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <UserSearch className="h-4 w-4 text-neutral-400 group-focus-within:text-accent transition-colors duration-300" />
+                    </div>
+                    <input
+                    type="text"
+                    value={personRole}
+                    onChange={(e) => setPersonRole(e.target.value)}
+                    placeholder="Role (e.g. Cinematographer)"
+                    aria-label="Role"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
+                    />
+                </div>
+                
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-4 w-4 text-neutral-400 group-focus-within:text-accent transition-colors duration-300" />
+                    </div>
+                    <input
+                    type="text"
+                    value={personCity}
+                    onChange={(e) => setPersonCity(e.target.value)}
+                    placeholder="City (e.g. Mumbai, Chennai)"
+                    aria-label="City"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    className="block w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm hover:shadow-md dark:hover:bg-neutral-800"
+                    />
+                </div>
+              </>
+          )}
+
           <button 
             onClick={handleSubmit}
             disabled={
                 isSearching || 
                 (activeMode === 'discovery' ? (!industry || !city) : 
                  activeMode === 'jobs' ? (!role || !jobCity) : 
+                 activeMode === 'people' ? (!personRole || !personCity) :
                  !companyName)
             }
             className={`
               w-full flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all duration-300 shadow-lg 
-              ${isSearching || (activeMode === 'discovery' ? (!industry || !city) : activeMode === 'jobs' ? (!role || !jobCity) : !companyName)
+              ${isSearching || (activeMode === 'discovery' ? (!industry || !city) : activeMode === 'jobs' ? (!role || !jobCity) : activeMode === 'people' ? (!personRole || !personCity) : !companyName)
                 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed shadow-none' 
                 : 'bg-accent hover:bg-accent-glow text-white shadow-accent/20 hover:shadow-accent/40 active:scale-[0.98]'}
             `}
@@ -280,16 +339,13 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
             {isSearching && companies.length === 0 ? (
                 <span className="font-mono text-xs uppercase tracking-wide animate-pulse">{loadingText}</span>
             ) : (
-                activeMode === 'discovery' ? 'Find Leads' : activeMode === 'jobs' ? 'Find Jobs' : 'Lookup'
+                activeMode === 'discovery' ? 'Find Leads' : activeMode === 'jobs' ? 'Find Jobs' : activeMode === 'people' ? 'Find People' : 'Lookup'
             )}
           </button>
         </div>
       </div>
 
-      {/* Soft Gradient Divider */}
-      <div className="h-6 w-full bg-gradient-to-b from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-950 dark:via-neutral-950 z-10 shrink-0"></div>
-
-      {/* Results List - SCROLLABLE AREA */}
+      {/* Results List */}
       <div id="results-container" className="flex-1 overflow-y-auto -mx-2 px-2 pb-4 space-y-3 min-h-0 custom-scrollbar">
         {isSearching && companies.length === 0 ? (
              <div className="space-y-3">
@@ -301,17 +357,40 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
         ) : (
             <>
                 {companies.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-60 animate-fade-in p-8">
-                    <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
-                        <Radar className="w-8 h-8 text-neutral-400" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
-                    Ready to Search
-                    </h3>
-                    <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
-                        Enter your search criteria above to begin.
-                    </p>
-                </div>
+                    hasSearched ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center opacity-80 animate-fade-in p-8">
+                            <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
+                                <AlertCircle className="w-8 h-8 text-neutral-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
+                                No verified leads found
+                            </h3>
+                            <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed mb-4">
+                                The AI couldn't verify specific roles in this location.
+                            </p>
+                            <button 
+                                onClick={() => {
+                                    setCity(''); setIndustry(''); setRole(''); setJobCity('');
+                                    setHasSearched(false);
+                                }}
+                                className="px-4 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                            >
+                                Clear Search
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-center opacity-60 animate-fade-in p-8">
+                            <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900/50 flex items-center justify-center mb-4 ring-1 ring-neutral-200 dark:ring-white/5">
+                                <Radar className="w-8 h-8 text-neutral-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">
+                                Ready to Search
+                            </h3>
+                            <p className="text-xs text-neutral-500 max-w-[200px] leading-relaxed">
+                                Enter your search criteria above to begin hunting.
+                            </p>
+                        </div>
+                    )
                 )}
 
                 {companies.map((company, index) => {
@@ -354,7 +433,6 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                             )}
                         </div>
                         
-                        {/* Display Open Roles clearly in Jobs mode */}
                         {activeMode === 'jobs' && company.openRoles && company.openRoles.length > 0 ? (
                              <div className="mt-3 space-y-1.5">
                                 {company.openRoles.slice(0, 2).map((role, i) => (
@@ -379,7 +457,6 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
 
                         </div>
 
-                        {/* Hot Score Badge */}
                         <div className={`
                             flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-white shadow-sm shrink-0
                             bg-gradient-to-r ${hotColor}
@@ -389,7 +466,6 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                         </div>
                     </div>
                     
-                    {/* Active Indicator Slide-in */}
                     <div className={`
                         mt-3 flex items-center text-xs font-medium text-accent overflow-hidden transition-all duration-300 ease-out
                         ${isSelected ? 'max-h-6 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-2'}
@@ -401,8 +477,7 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                 );
                 })}
                 
-                {/* Infinite Scroll Trigger Area */}
-                {companies.length > 0 && (activeMode === 'discovery' || activeMode === 'jobs') && (
+                {companies.length > 0 && (activeMode === 'discovery' || activeMode === 'jobs' || activeMode === 'people') && (
                 <div ref={loadMoreRef} className="py-4 flex flex-col items-center justify-center opacity-70">
                     {isSearching ? (
                         <div className="flex items-center gap-2 text-xs text-neutral-500">
@@ -410,14 +485,13 @@ export const SearchPane: React.FC<SearchPaneProps> = ({
                             <span className="animate-pulse">Loading more results...</span>
                         </div>
                     ) : (
-                        <div className="h-4"></div> // Spacer trigger
+                        <div className="h-4"></div>
                     )}
                 </div>
                 )}
             </>
         )}
 
-        {/* Verified Sources Footer */}
         {sources.length > 0 && (
           <div className="mt-6 pt-4 border-t border-neutral-200 dark:border-white/10 opacity-70 hover:opacity-100 transition-opacity">
             <h4 className="text-[10px] font-bold uppercase text-neutral-500 mb-2">Verified Sources</h4>
