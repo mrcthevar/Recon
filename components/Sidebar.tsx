@@ -61,6 +61,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  const handleDeleteAll = () => {
+    if (view === 'companies') {
+        if (window.confirm(`Delete all ${savedCompanies.length} leads?`)) {
+            onRemoveCompanies(savedCompanies.map(c => c.id));
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+        }
+    } else {
+        if (window.confirm(`Delete all ${savedJobs.length} jobs?`)) {
+            onRemoveJobs(savedJobs.map(j => j.id));
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+        }
+    }
+  };
+
   const handleExportCSV = () => {
     if (view === 'companies') {
         const targets = isSelectionMode && selectedIds.length > 0
@@ -329,13 +345,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                </div>
             ) : (
-                <button
-                    onClick={handleExportCSV}
-                    className="w-full py-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-white/10 hover:border-accent hover:text-accent text-neutral-500 dark:text-neutral-400 text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-sm"
-                >
-                    <Download className="w-3 h-3" />
-                    <span>Export All CSV</span>
-                </button>
+                <div className="flex gap-2 animate-fade-in-up">
+                    <button
+                        onClick={handleDeleteAll}
+                        className="flex-1 py-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-white/10 hover:border-red-500 hover:text-red-500 text-neutral-500 dark:text-neutral-400 text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-sm"
+                    >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete All</span>
+                    </button>
+                    <button
+                        onClick={handleExportCSV}
+                        className="flex-1 py-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-white/10 hover:border-accent hover:text-accent text-neutral-500 dark:text-neutral-400 text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-sm"
+                    >
+                        <Download className="w-3 h-3" />
+                        <span>Export All</span>
+                    </button>
+                </div>
             )}
          </div>
       )}
